@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using TerrainBakery.Jobs;
 using Unity.Collections;
 using Unity.Jobs;
@@ -92,7 +93,7 @@ public class Generator : MonoBehaviour
 
             // if (i != 1)
             // {
-                meshFilterMesh = GenerateLowerLODMesh(meshFilterMesh.triangles, meshFilterMesh.vertices, chunkSize, 2);
+                meshFilterMesh = GenerateLowerLODMesh(meshFilterMesh.triangles, meshFilterMesh.vertices, chunkSize);
             // }
             
             
@@ -125,172 +126,309 @@ public class Generator : MonoBehaviour
         public Mesh Mesh;
     }
 
-    Mesh GenerateLowerLODMesh(int[] originalIndices, Vector3[] originalVertices, int chunkSize, int reduceAmount)
-    {
-        List<Vector3> vertices = new(); //points
-        List<Triangle> triangles = new(); //triangles
-    
-        int vertexIndex = 0;
-    
-        List<int> removedPoints = new List<int>();
-        int reduce = 0;
 
-        for (int index = 0; index < originalVertices.Length; index++)
+
+    /// ///////////////////////////////
+    /// ///////////////////////////////
+    /// ///////////////////////////////
+    /// ///////////////////////////////
+    /// ///////////////////////////////
+    /// ///////////////////////////////
+    /// ///////////////////////////////
+    /// ///////////////////////////////
+    /// ///////////////////////////////
+    /// ///////////////////////////////
+    /// START OF BENAS' CODE
+    /// ///////////////////////////////
+    /// ///////////////////////////////
+    /// ///////////////////////////////
+    /// ///////////////////////////////
+    /// ///////////////////////////////
+    /// ///////////////////////////////
+    /// ///////////////////////////////
+    /// ///////////////////////////////
+    /// ///////////////////////////////
+    /// ///////////////////////////////
+    private static Dictionary<int, List<int>> GetConnectedIndices(IReadOnlyList<int> o_triangle_indices, IReadOnlyCollection<Vector3> o_points)
+    {
+        Dictionary<int, List<int>> connected_indices = new();
+
+        for (int i = 0; i < o_points.Count; i++)
         {
-            var x = originalVertices[index].x;
-            var y = originalVertices[index].z;
-            
-            if (x == 0 || x == chunkSize - 1f || y == 0 || y == chunkSize - 1f)
+            connected_indices[i] = new List<int>();
+
+            for (int j = 0; j < o_triangle_indices.Count; j++)
             {
-                vertices.Add(originalVertices[index]);
+                if (o_triangle_indices[j] == i)
+                {
+                    int t_start = j - (j % 3);
+
+                    for (int k = t_start; k < t_start + 3; k++)
+                    {
+                        if (o_triangle_indices[k] != i)
+                        {
+                            connected_indices[i].Add(o_triangle_indices[k]);
+                        }
+                    }
+                }
+            }
+
+            connected_indices[i] = connected_indices[i].Distinct().ToList();
+        }
+
+        return connected_indices;
+    }
+
+    private static Dictionary<int, Vector3> GetAverageNormalForRemovedTriangles(IReadOnlyList<int> o_triangle_indices, IReadOnlyList<Vector3> o_points)
+    {
+        Dictionary<int, Vector3> reference_triangle = new();
+        for (int i = 0; i < o_points.Count; i++)
+        {
+            // reference_triangle[i] = new Vector3();
+            // continue;
+            List<Vector3> normals = new();
+            for (int j = 0; j < o_triangle_indices.Count; j++)
+            {
+                int t_start = j - (j % 3);
+
+                if (o_triangle_indices[t_start] == i ||
+                     o_triangle_indices[t_start + 1] == i ||
+                     o_triangle_indices[t_start + 2] == i)
+                {
+                    var a = o_points[o_triangle_indices[t_start + 1]] - o_points[o_triangle_indices[t_start]];
+                    var b = o_points[o_triangle_indices[t_start + 2]] - o_points[o_triangle_indices[t_start]];
+
+                    float nx = a.y * b.z - a.z * b.y;
+                    float ny = a.z * b.x - a.x * b.z;
+                    float nz = a.x * b.y - a.y * b.x;
+
+                    normals.Add(Vector3.Normalize((new Vector3(nx, ny, nz))));
+
+                }
+            }
+            reference_triangle[i] = new Vector3();
+            foreach (var normal in normals)
+            {
+                reference_triangle[i] += normal;
+            }
+
+            reference_triangle[i] /= normals.Count;
+        }
+        return reference_triangle;
+    }
+
+    private static List<int> GetRemovedPoints(IList<Vector3> o_points, float chunk_size, IReadOnlyDictionary<int, List<int>> connected_indices)
+    {
+        List<int> removed_indices_to_original = new();
+        for (int index = 0; index < o_points.Count; index++)
+        {
+            float x = o_points[index].x;
+            float y = o_points[index].y;
+            float z = o_points[index].z;
+
+            // IF EDGE LEAVE ALONE
+            if (x <= 0 || x >= chunk_size
+                       ||
+               y <= 0 || y >= chunk_size
+               ||
+               z <= 0 || z >= chunk_size)
+            {
                 continue;
             }
-    
-            if (reduce == 0)
+
+            // CHECK EACH CONNECTION TO SEE IF IT IS CONNECTED TO A REMOVED POINT
+            bool connected_to_removed = false;
+
+            List<int> connected_points = connected_indices[index];
+
+            foreach (int t in connected_points)
             {
-                removedPoints.Add(index);
+                if (removed_indices_to_original.Contains(t))
+                {
+                    connected_to_removed = true;
+                    break;
+                }
+            }
+
+            // IF NOT CONNECTED TO REMOVED POINT, REMOVE, ELSE KEEP
+            if (!connected_to_removed)
+            {
+                // kept_indices_to_original.Add(index);
+                removed_indices_to_original.Add(index);
+            }
+        }
+        return removed_indices_to_original;
+    }
+
+    private static List<Triangle> GenerateTrianglesForGaps(IReadOnlyList<Vector3> o_points, List<int> removed_indices_to_original, IReadOnlyDictionary<int, List<int>> connected_indices, IReadOnlyDictionary<int, Vector3> reference_triangle)
+    {
+        // This should not be this many nested statements. I'm sorry. needs some damn functions.
+        List<Triangle> triangles = new();
+
+        foreach (int removed_point in removed_indices_to_original)
+        {
+            List<int> connected_to_removed_points = connected_indices[removed_point];
+
+            List<int> already_connected = new();
+            int count = 0;
+            while ((connected_to_removed_points.Count - already_connected.Count) > 2)
+            {
+                List<int> tried = new();
+                foreach (int connected_to_removed in connected_to_removed_points)
+                {
+                    if (already_connected.Contains(connected_to_removed)) continue;
+                    if (tried.Contains(connected_to_removed)) continue;
+
+                    if ((connected_to_removed_points.Count - already_connected.Count) <= 2) break;
+                    List<int> connected_to_connected_points = connected_indices[connected_to_removed];
+                    List<int> triangle_points = new();
+                    foreach (int connected_to_connected in connected_to_connected_points)
+                    {
+                        if (connected_to_removed_points.Contains(connected_to_connected) &&
+                            !(already_connected.Contains(connected_to_connected)))
+                        {
+                            triangle_points.Add(connected_to_connected);
+                            if (triangle_points.Count == 2)
+                            {
+                                // make sure no removed edges getting added. Shouldn't happen but just in case
+                                if (removed_indices_to_original.Contains(connected_to_removed) ||
+                                    removed_indices_to_original.Contains(triangle_points[0]) ||
+                                    removed_indices_to_original.Contains(triangle_points[1])
+                                   ) break;
+
+                                // For working out normal of triangle to see which way to draw it.
+                                var a = o_points[triangle_points[0]] - o_points[connected_to_removed];
+                                var b = o_points[triangle_points[1]] - o_points[connected_to_removed];
+
+                                float nx = a.y * b.z - a.z * b.y;
+                                float ny = a.z * b.x - a.x * b.z;
+                                float nz = a.x * b.y - a.y * b.x;
+
+                                var n = math.normalize(new Vector3(nx, ny, nz));
+                                var r = reference_triangle[removed_point];
+
+                                float angle = Vector3.Angle(n, r);
+                                float sign = Mathf.Sign(Vector3.Dot(new Vector3(0, 1, 0), Vector3.Cross(n, r)));
+
+                                float signed_angle = angle * sign;
+
+                                // If more than 90 away from average of all removed points then we assume we need to draw it the other way.
+                                if (math.abs(signed_angle) < 90)
+                                {
+                                    triangles.Add(new Triangle(connected_to_removed, triangle_points[0], triangle_points[1]));
+                                }
+                                else
+                                {
+                                    triangles.Add(new Triangle(connected_to_removed, triangle_points[1], triangle_points[0]));
+                                }
+
+                                // Only add the edge if its not already there.
+                                if (!connected_indices[triangle_points[0]].Contains(triangle_points[1]))
+                                {
+                                    connected_indices[triangle_points[0]].Add(triangle_points[1]);
+                                }
+                                if (!connected_indices[triangle_points[1]].Contains(triangle_points[0]))
+                                {
+                                    connected_indices[triangle_points[1]].Add(triangle_points[0]);
+                                }
+
+                                tried.Add(triangle_points[0]);
+                                tried.Add(triangle_points[1]);
+
+                                already_connected.Add(connected_to_removed);
+                                break;
+                            }
+                        }
+                    }
+                }
+                // this is weird... Seems to loop forever otherwise... Think this has something to do with why there's pockets.
+                count++;
+                if (count > 10) break;
+            }
+        }
+
+        return triangles;
+    }
+
+    private static List<Triangle> GetUnchangedTriangles(IReadOnlyList<int> o_triangle_indices, ICollection<int> removed_indices_to_original)
+    {
+        List<Triangle> triangles = new();
+        for (int index = 0; index < o_triangle_indices.Count; index += 3)
+        {
+
+            if (removed_indices_to_original.Contains(o_triangle_indices[index]) ||
+                removed_indices_to_original.Contains(o_triangle_indices[index + 1]) ||
+                removed_indices_to_original.Contains(o_triangle_indices[index + 2]))
+            {
+                // Do Nothing -> This had stuff before im not just a sick fuck that uses empty ifs...
             }
             else
             {
-                vertices.Add(originalVertices[index]);
-            }
-    
-            reduce++;
-            reduce %= reduceAmount; //2
-        }
-    
-        List<uint> connected = new List<uint>();
-    
-        int removedPassed = 0;
-        int removedAbove = 0;
-        int removedBelow = 0;
-
-        for (int index = 0; index < originalVertices.Length; index++)
-        {
-            bool removed = removedPoints.Contains(index);
-    
-            int left = index - 1 - removedPassed;
-            int right = index - removedPassed;
-            int top = index - chunkSize - removedAbove;
-            int bottom = index + chunkSize - removedBelow;
-    
-            if (removed)
-            {
-                triangles.Add(new Triangle(top, right, left));
-                triangles.Add(new Triangle(left, right, bottom));
-    
-                connected.Add((uint) (index - 1));
-                connected.Add((uint) (index + 1));
-                connected.Add((uint) (index - chunkSize));
-                connected.Add((uint) (index + chunkSize));
-    
-                removedPassed++;
-            }
-    
-            if (index - chunkSize >= 0)
-            {
-                bool topRemoved = removedPoints.Contains(index - chunkSize);
-                if (topRemoved) removedAbove++;
-            }
-    
-            if (index + chunkSize < originalVertices.Length)
-            {
-                bool bottomRemoved = removedPoints.Contains(index + chunkSize);
-                if (bottomRemoved) removedBelow++;
-            }
-        }
-    
-        removedPassed = 0;
-        removedAbove = 0;
-        removedBelow = 0;
-        
-        for (int index = 0; index < originalVertices.Length; index++)
-        {
-            var x = originalVertices[index].x;
-            var y = originalVertices[index].z;
-
-            bool removed = removedPoints.Contains(index);
-
-            // if Can FIND index then skip to next
-            if (connected.Contains((uint) index) || removed)
-            {
-                if (removed)
-                {
-                    removedPassed++;
-                }
-
-                if (index - chunkSize >= 0)
-                {
-                    bool topRemoved = removedPoints.Contains(index - chunkSize);
-                    if (topRemoved) removedAbove++;
-                }
-
-                if (index + chunkSize < originalVertices.Length)
-                {
-                    bool bottomRemoved = removedPoints.Contains(index + chunkSize);
-                    if (bottomRemoved) removedBelow++;
-                }
-
-                continue;
-            }
-
-            int left = index - 1 - removedPassed;
-            int right = index + 1 - removedPassed;
-            int top = index - chunkSize - removedAbove;
-            int bottom = index + chunkSize - removedBelow;
-
-            if (y - 1 >= 0 && x - 1 >= 0)
-            {
-                triangles.Add(new Triangle(index - removedPassed, left, top));
-            }
-
-            if (x - 1 >= 0 && y + 1 < chunkSize)
-            {
-                triangles.Add(new Triangle(index - removedPassed, bottom, left));
-            }
-
-            if (y + 1 < chunkSize && x + 1 < chunkSize)
-            {
-                triangles.Add(new Triangle(index - removedPassed, right, bottom));
-            }
-
-            if (x + 1 < chunkSize && y - 1 >= 0)
-            {
-                triangles.Add(new Triangle(index - removedPassed, top, right));
-            }
-
-            if (index - chunkSize >= 0)
-            {
-                bool topRemoved = removedPoints.Contains(index - chunkSize);
-                if (topRemoved) removedAbove++;
-            }
-
-            if (index + chunkSize < originalVertices.Length)
-            {
-                bool bottomRemoved = removedPoints.Contains(index + chunkSize);
-                if (bottomRemoved) removedBelow++;
+                triangles.Add(new Triangle(
+                    o_triangle_indices[index],
+                    o_triangle_indices[index + 1],
+                    o_triangle_indices[index + 2]
+                ));
             }
         }
 
-        for (int i = triangles.Count - 1; i >= 0; i--)
-        {
-            if (triangles[i].vertexIndexA < 0 || 
-                triangles[i].vertexIndexB < 0 || 
-                triangles[i].vertexIndexC < 0 ||
-                triangles[i].vertexIndexA >= vertices.Count || 
-                triangles[i].vertexIndexB >= vertices.Count || 
-                triangles[i].vertexIndexC >= vertices.Count)
-            {
-                triangles.RemoveAt(i);
-            }
-        }
-
-        var lodMesh = new Mesh();
-        lodMesh.vertices = vertices.ToArray();
-        lodMesh.triangles = ConvertToIndexArray(triangles);
-    
-        return lodMesh;
+        return triangles;
     }
+
+    private Mesh Lod(IReadOnlyList<int> o_triangle_indices, Vector3[] o_points, int chunk_size)
+    {
+        // Used for calculating which way the triangles need to go.
+        Dictionary<int, Vector3> reference_triangles = GetAverageNormalForRemovedTriangles(o_triangle_indices, o_points);
+
+        // Dictionary of indices to all connected points from original.
+        Dictionary<int, List<int>> connected_indices = GetConnectedIndices(o_triangle_indices, o_points);
+
+        // Points which we want to remove
+        List<int> removed_indices_to_original = GetRemovedPoints(o_points, chunk_size, connected_indices);
+
+        List<Triangle> generated_triangles = GenerateTrianglesForGaps(o_points, removed_indices_to_original, connected_indices, reference_triangles);
+        List<Triangle> unchanged_triangles = GetUnchangedTriangles(o_triangle_indices, removed_indices_to_original);
+
+        generated_triangles.AddRange(unchanged_triangles);
+        int[] indices = ConvertToIndexArray(generated_triangles);
+
+        print("WENT FROM ::: " + (o_triangle_indices.Count / 3) + " ::: TRIANGLES TO ::: " + (generated_triangles.Count) + " ::: TRIANGLES");
+
+        Mesh mesh = new()
+        {
+            vertices = o_points,
+            triangles = indices
+        };
+
+        return mesh;
+    }
+
+    private Mesh GenerateLowerLODMesh(int[] o_triangle_indices, Vector3[] o_points, int chunk_size)
+    {
+        // CAN LOOP THIS FUNCTION TO MAKE IT CUT MORE.
+        // BUT BECAUSE THEIRS POCKETS ITS MAKING ITERATIONS ON THE NEW MESH HAVE GIG MISSED TRIANGLES.
+        var mesh = Lod(o_triangle_indices, o_points, chunk_size);
+        
+        return mesh;
+    }
+    /// ///////////////////////////////
+    /// ///////////////////////////////
+    /// ///////////////////////////////
+    /// ///////////////////////////////
+    /// ///////////////////////////////
+    /// ///////////////////////////////
+    /// ///////////////////////////////
+    /// ///////////////////////////////
+    /// END OF BENAS' CODE
+    /// ///////////////////////////////
+    /// ///////////////////////////////
+    /// ///////////////////////////////
+    /// ///////////////////////////////
+    /// ///////////////////////////////
+    /// ///////////////////////////////
+    /// ///////////////////////////////
+    /// ///////////////////////////////
+    /// ///////////////////////////////
 
     private int[] ConvertToIndexArray(List<Triangle> triangles)
     {
