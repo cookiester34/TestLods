@@ -246,6 +246,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4f98b0fa5f9c23649a710ca155283765, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  test: {fileID: 6368487576928355086, guid: e4ea87042c005014ea8794d8c60e7d14, type: 3}
   Material: {fileID: 2100000, guid: 07647e074f5802c46bbbcc63d8c27402, type: 2}
 --- !u!4 &944066746
 Transform:

@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using TerrainBakery.Jobs;
@@ -9,8 +8,12 @@ using UnityEngine;
 
 public class Generator : MonoBehaviour
 {
+    [SerializeField] private GameObject test;
     [SerializeField] private Material Material;
     private Dictionary<Vector3, chunkData> chunks = new();
+    
+    private List<Vector3> verticesLower = new List<Vector3>();
+    private List<Vector3> verticesHigher = new List<Vector3>();
 
     private void OnDrawGizmos()
     {
@@ -22,6 +25,26 @@ public class Generator : MonoBehaviour
             // Gizmos.color = Color.magenta;
             // Gizmos.DrawWireMesh(chunk.Mesh, position, quaternion.identity, new Vector3(1,1,1));
         }
+
+        for (var index = 0; index < verticesLower.Count; index++)
+        {
+            if (index >= 0 && index < verticesLower.Count)
+            {
+                var vector3 = verticesLower[index];
+                Gizmos.color = Color.red;
+                Gizmos.DrawSphere(vector3, 1f);
+            }
+        }
+
+        // for (var index = 0; index < verticesHigher.Count; index++)
+        // {
+        //     if (index >= 0 && index < verticesHigher.Count)
+        //     {
+        //         var vector3 = verticesHigher[index];
+        //         Gizmos.color = Color.green;
+        //         Gizmos.DrawSphere(vector3, 0.1f);
+        //     }
+        // }
     }
 
     // Start is called before the first frame update
@@ -31,12 +54,12 @@ public class Generator : MonoBehaviour
         var chunkSizeDoubled = chunkSize * 2;
         var terrainMapSize = chunkSizeDoubled * chunkSizeDoubled * chunkSize;
         
-        for (int l = -2; l < 2; l++)
-        for (int i = -2; i < 2; i++)
-        for (int j = -2; j < 2; j++)
+        // for (int l = -2; l < 2; l++)
+        // for (int i = -2; i < 2; i++)
+        for (int j = 1; j < 2; j++)
 
         {
-            var chunkPosition = new Vector3(i * chunkSize, l * chunkSize, j * chunkSize);
+            var chunkPosition = new Vector3(0 * chunkSize, 0 * chunkSize, j * chunkSize);
             var terrainMapJob = new TerrainMapJob
             {
                 chunkSize = chunkSize + 1,
@@ -62,14 +85,16 @@ public class Generator : MonoBehaviour
                 terrainMap = new NativeArray<float>(terrainMapJob.terrainMap, Allocator.TempJob),
                 terrainSurface = 0.5f,
                 cube = new NativeArray<float>(8, Allocator.TempJob),
-                smoothTerrain = true,
-                flatShaded = false,
+                smoothTerrain = false,
+                flatShaded = true,
                 triCount = new NativeArray<int>(1, Allocator.TempJob),
                 vertCount = new NativeArray<int>(1, Allocator.TempJob),
                 //max number of vertices: 65535
-                vertices = new NativeArray<Vector3>(65535, Allocator.TempJob),
-                triangles = new NativeArray<int>(65535, Allocator.TempJob),
-                lodIndex = 0
+                vertices = new NativeArray<Vector3>(90000, Allocator.TempJob),
+                triangles = new NativeArray<int>(90000, Allocator.TempJob),
+                lodIndex = 0 != 1 ? 1 : 0,
+                lowerLodData = new NativeArray<CubeEdgeTriangleData>(5768, Allocator.Persistent),
+                higherLodData = new NativeArray<CubeEdgeTriangleData>(2744, Allocator.Persistent)
             };
 
             meshDataJob.Schedule().Complete();
@@ -91,10 +116,13 @@ public class Generator : MonoBehaviour
                 triangles = MeshDataSet.chunkTriangles,
             };
 
-            // if (i != 1)
-            // {
-                meshFilterMesh = GenerateLowerLODMesh(meshFilterMesh.triangles, meshFilterMesh.vertices, chunkSize);
-            // }
+            if (0 != 1)
+            {
+                // meshFilterMesh = GenerateLowerLODMesh(meshFilterMesh.triangles, meshFilterMesh.vertices, chunkSize, true);
+                // meshFilterMesh = GenerateLowerLODMesh(meshFilterMesh.triangles, meshFilterMesh.vertices, chunkSize, false);
+                // meshFilterMesh = GenerateLowerLODMesh(meshFilterMesh.triangles, meshFilterMesh.vertices, chunkSize);
+                // meshFilterMesh = GenerateLowerLODMesh(meshFilterMesh.triangles, meshFilterMesh.vertices, chunkSize);
+            }
             
             
             meshFilterMesh.RecalculateNormals();
@@ -102,12 +130,49 @@ public class Generator : MonoBehaviour
             chunks.Add(chunkPosition, MeshDataSet);
 
 
-            var gameobject = new GameObject(i == 1 ? "LOD: 0" : "LOD: 3");
+            var gameobject = new GameObject(0 == 1 ? "LOD: 0" : "LOD: 3");
             gameobject.transform.position = chunkPosition;
             var meshFilter = gameobject.AddComponent<MeshFilter>();
             meshFilter.mesh = meshFilterMesh;
             var meshRenderer = gameobject.AddComponent<MeshRenderer>();
             meshRenderer.material = Material;
+
+            foreach (var cubeEdgeTriangleData in meshDataJob.lowerLodData)
+            {
+                if (cubeEdgeTriangleData.vertex1 != Vector3.zero)
+                    verticesLower.Add(cubeEdgeTriangleData.vertex1 + chunkPosition);
+                if (cubeEdgeTriangleData.vertex2 != Vector3.zero)
+                    verticesLower.Add(cubeEdgeTriangleData.vertex2 + chunkPosition);
+                if (cubeEdgeTriangleData.vertex3 != Vector3.zero)
+                    verticesLower.Add(cubeEdgeTriangleData.vertex3 + chunkPosition);
+                if (cubeEdgeTriangleData.vertex4 != Vector3.zero)
+                    verticesLower.Add(cubeEdgeTriangleData.vertex4 + chunkPosition);
+
+                // var thing = Instantiate(test);
+                // thing.transform.position = cubeEdgeTriangleData.vertex1 + chunkPosition;
+                // thing.transform.localScale = new Vector3(1f, 1f, 1f);
+                //
+                // var thing2 = Instantiate(test);
+                // thing2.transform.position = cubeEdgeTriangleData.vertex2 + chunkPosition;
+                // thing2.transform.localScale = new Vector3(1f, 1f, 1f);
+                //
+                // var thing3 = Instantiate(test);
+                // thing3.transform.position = cubeEdgeTriangleData.vertex3 + chunkPosition;
+                // thing3.transform.localScale = new Vector3(1f, 1f, 1f);
+                //
+                // var thing4 = Instantiate(test);
+                // thing4.transform.position = cubeEdgeTriangleData.vertex4 + chunkPosition;
+                // thing4.transform.localScale = new Vector3(1f, 1f, 1f);
+
+            }
+            
+            foreach (var cubeEdgeTriangleData in meshDataJob.higherLodData)
+            {
+                verticesHigher.Add(cubeEdgeTriangleData.vertex1 + chunkPosition);
+                verticesHigher.Add(cubeEdgeTriangleData.vertex2 + chunkPosition);
+                verticesHigher.Add(cubeEdgeTriangleData.vertex3 + chunkPosition);
+                verticesHigher.Add(cubeEdgeTriangleData.vertex4 + chunkPosition);
+            }
 
             meshDataJob.cube.Dispose();
             meshDataJob.terrainMap.Dispose();
@@ -115,6 +180,8 @@ public class Generator : MonoBehaviour
             meshDataJob.vertCount.Dispose();
             meshDataJob.vertices.Dispose();
             meshDataJob.triangles.Dispose();
+            meshDataJob.lowerLodData.Dispose();
+            meshDataJob.higherLodData.Dispose();
             terrainMapJob.terrainMap.Dispose();
         }
     }
@@ -264,14 +331,77 @@ public class Generator : MonoBehaviour
     {
         // This should not be this many nested statements. I'm sorry. needs some damn functions.
         List<Triangle> triangles = new();
+        // List<int> invalid_points = new();
+        //
+        // foreach (int removed_point in removed_indices_to_original)
+        // {
+        //     List<int> connected_to_removed_points = connected_indices[removed_point];
+        //
+        //     Dictionary<int, int> number_connected_shared_with_removed = new();
+        //     foreach (int connected_to_removed in connected_to_removed_points)
+        //     {
+        //         foreach (int connected_to_connected in connected_indices[connected_to_removed])
+        //         {
+        //             if (!connected_to_removed_points.Contains(connected_to_connected)) continue;
+        //             if (number_connected_shared_with_removed.ContainsKey(connected_to_removed))
+        //             {
+        //                 number_connected_shared_with_removed[connected_to_removed]++;
+        //             }
+        //             else
+        //             {
+        //                 number_connected_shared_with_removed.Add(connected_to_removed, 1);
+        //             }
+        //         }
+        //     }
+        //
+        //     while (true)
+        //     {
+        //         var points_more_than_2 = number_connected_shared_with_removed.Where(i => i.Value > 2).ToList();
+        //         if (points_more_than_2.Count < 2) break;
+        //         // foreach (var VARIABLE in points_more_than_2)
+        //         // {
+        //         //     Debug.Log(VARIABLE.Key + " : " + VARIABLE.Value);
+        //         // }
+        //         //
+        //         // Debug.Log("Chunk Done");
+        //         foreach (var (index, _) in points_more_than_2)
+        //         {
+        //             foreach (var (indexA, __) in points_more_than_2)
+        //             {
+        //                 if (indexA == index) continue;
+        //                 if (!connected_indices[index].Contains(indexA)) continue;
+        //
+        //                 var should_break = false;
+        //
+        //                 foreach (var both_connected_to_point in connected_indices[index])
+        //                 {
+        //                     if (!connected_indices[indexA].Contains(both_connected_to_point)) continue;
+        //
+        //                     if (both_connected_to_point == removed_point) continue;
+        //
+        //                     invalid_points.Add(both_connected_to_point);
+        //                     number_connected_shared_with_removed[index]--;
+        //                     number_connected_shared_with_removed[indexA]--;
+        //                     should_break = true;
+        //                     break;
+        //                 }
+        //
+        //                 if (should_break) break;
+        //             }
+        //         }
+        //     }
+        // }
+        // removed_indices_to_original.AddRange(invalid_points);
 
         foreach (int removed_point in removed_indices_to_original)
         {
+            // if (invalid_points.Contains(removed_point)) continue;
             List<int> connected_to_removed_points = connected_indices[removed_point];
-
+            List<Triangle> temp_triangles = new();
+            
             List<int> already_connected = new();
             int count = 0;
-            while ((connected_to_removed_points.Count - already_connected.Count) > 2)
+            while (connected_to_removed_points.Count - already_connected.Count > 2)
             {
                 List<int> tried = new();
                 foreach (int connected_to_removed in connected_to_removed_points)
@@ -279,14 +409,23 @@ public class Generator : MonoBehaviour
                     if (already_connected.Contains(connected_to_removed)) continue;
                     if (tried.Contains(connected_to_removed)) continue;
 
-                    if ((connected_to_removed_points.Count - already_connected.Count) <= 2) break;
+                    if (connected_to_removed_points.Count - already_connected.Count <= 2) break;
                     List<int> connected_to_connected_points = connected_indices[connected_to_removed];
                     List<int> triangle_points = new();
                     foreach (int connected_to_connected in connected_to_connected_points)
                     {
-                        if (connected_to_removed_points.Contains(connected_to_connected) &&
-                            !(already_connected.Contains(connected_to_connected)))
+                        if (connected_to_removed_points.Contains(connected_to_connected))
                         {
+                            //Check here for shared connected
+                            // number_connected_shared_with_removed[connected_to_removed]++;
+                            // if (number_connected_shared_with_removed[connected_to_removed] > 3)
+                            // {
+                            //     shit_point_found = true;
+                            //     temp_triangles.Clear();
+                            // }
+                            
+                            if (already_connected.Contains(connected_to_connected)) continue;
+
                             triangle_points.Add(connected_to_connected);
                             if (triangle_points.Count == 2)
                             {
@@ -294,7 +433,7 @@ public class Generator : MonoBehaviour
                                 if (removed_indices_to_original.Contains(connected_to_removed) ||
                                     removed_indices_to_original.Contains(triangle_points[0]) ||
                                     removed_indices_to_original.Contains(triangle_points[1])
-                                   ) break;
+                                   ) continue;
 
                                 // For working out normal of triangle to see which way to draw it.
                                 var a = o_points[triangle_points[0]] - o_points[connected_to_removed];
@@ -315,11 +454,13 @@ public class Generator : MonoBehaviour
                                 // If more than 90 away from average of all removed points then we assume we need to draw it the other way.
                                 if (math.abs(signed_angle) < 90)
                                 {
-                                    triangles.Add(new Triangle(connected_to_removed, triangle_points[0], triangle_points[1]));
+                                    temp_triangles.Add(new Triangle(connected_to_removed, triangle_points[0],
+                                        triangle_points[1]));
                                 }
                                 else
                                 {
-                                    triangles.Add(new Triangle(connected_to_removed, triangle_points[1], triangle_points[0]));
+                                    temp_triangles.Add(new Triangle(connected_to_removed, triangle_points[1],
+                                        triangle_points[0]));
                                 }
 
                                 // Only add the edge if its not already there.
@@ -327,6 +468,7 @@ public class Generator : MonoBehaviour
                                 {
                                     connected_indices[triangle_points[0]].Add(triangle_points[1]);
                                 }
+
                                 if (!connected_indices[triangle_points[1]].Contains(triangle_points[0]))
                                 {
                                     connected_indices[triangle_points[1]].Add(triangle_points[0]);
@@ -336,15 +478,17 @@ public class Generator : MonoBehaviour
                                 tried.Add(triangle_points[1]);
 
                                 already_connected.Add(connected_to_removed);
-                                break;
                             }
                         }
                     }
                 }
+
                 // this is weird... Seems to loop forever otherwise... Think this has something to do with why there's pockets.
                 count++;
-                if (count > 10) break;
+                if (count > 3) break;
             }
+
+            triangles.AddRange(temp_triangles);
         }
 
         return triangles;
@@ -375,7 +519,7 @@ public class Generator : MonoBehaviour
         return triangles;
     }
 
-    private Mesh Lod(IReadOnlyList<int> o_triangle_indices, Vector3[] o_points, int chunk_size)
+    private Mesh Lod(IReadOnlyList<int> o_triangle_indices, Vector3[] o_points, int chunk_size, bool fillExisting)
     {
         // Used for calculating which way the triangles need to go.
         Dictionary<int, Vector3> reference_triangles = GetAverageNormalForRemovedTriangles(o_triangle_indices, o_points);
@@ -387,9 +531,12 @@ public class Generator : MonoBehaviour
         List<int> removed_indices_to_original = GetRemovedPoints(o_points, chunk_size, connected_indices);
 
         List<Triangle> generated_triangles = GenerateTrianglesForGaps(o_points, removed_indices_to_original, connected_indices, reference_triangles);
-        List<Triangle> unchanged_triangles = GetUnchangedTriangles(o_triangle_indices, removed_indices_to_original);
+        if (fillExisting)
+        {
+            List<Triangle> unchanged_triangles = GetUnchangedTriangles(o_triangle_indices, removed_indices_to_original);
 
-        generated_triangles.AddRange(unchanged_triangles);
+            generated_triangles.AddRange(unchanged_triangles);
+        }
         int[] indices = ConvertToIndexArray(generated_triangles);
 
         print("WENT FROM ::: " + (o_triangle_indices.Count / 3) + " ::: TRIANGLES TO ::: " + (generated_triangles.Count) + " ::: TRIANGLES");
@@ -403,11 +550,11 @@ public class Generator : MonoBehaviour
         return mesh;
     }
 
-    private Mesh GenerateLowerLODMesh(int[] o_triangle_indices, Vector3[] o_points, int chunk_size)
+    private Mesh GenerateLowerLODMesh(int[] o_triangle_indices, Vector3[] o_points, int chunk_size, bool fillExisting)
     {
         // CAN LOOP THIS FUNCTION TO MAKE IT CUT MORE.
         // BUT BECAUSE THEIRS POCKETS ITS MAKING ITERATIONS ON THE NEW MESH HAVE GIG MISSED TRIANGLES.
-        var mesh = Lod(o_triangle_indices, o_points, chunk_size);
+        var mesh = Lod(o_triangle_indices, o_points, chunk_size, fillExisting);
         
         return mesh;
     }

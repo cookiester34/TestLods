@@ -7,7 +7,52 @@ using static LookupTable;
 
 namespace TerrainBakery.Jobs
 {
-	[BurstCompile]
+	public struct CubeEdgeTriangleData
+	{
+		public int count;
+		public Vector3 vertex1;
+		public Vector3 vertex2;
+		public Vector3 vertex3;
+		public Vector3 vertex4;
+		
+		public void AddVertex(Vector3 value)
+		{
+			count++;
+			switch (count)
+			{
+				case 1:
+					vertex1 = value;
+					break;
+				case 2:
+					vertex2 = value;
+					break;
+				case 3:
+					vertex3 = value;
+					break;
+				case 4:
+					vertex4 = value;
+					break;
+			}
+		}
+	}
+
+	public static class ArrayHelpers
+	{
+		public static NativeArray<T> Add<T>(this NativeArray<T> array, T value) where T : struct
+		{
+			var arrayLength = array.Length;
+			var newArray = new NativeArray<T>(arrayLength + 1, Allocator.TempJob);
+			for (var i = 0; i < arrayLength; i++)
+			{
+				newArray[i] = array[i];
+			}
+			newArray[arrayLength] = value;
+			array.Dispose();
+			return newArray;
+		}
+	}
+	
+	// [BurstCompile]
 	public struct MeshDataJob : IJob, IChunkJob
 	{
 		[ReadOnly]
@@ -36,32 +81,203 @@ namespace TerrainBakery.Jobs
 		public NativeArray<Vector3> vertices;
 		public NativeArray<int> triangles;
 
+		private bool isLowerLod;
+		private int lowerLodCubeCount;
+		public NativeArray<CubeEdgeTriangleData> lowerLodData;
+		private int higherLodCubeCount;
+		public NativeArray<CubeEdgeTriangleData> higherLodData;
+
+		private bool wasAdded;
+
 		[BurstCompile]
 		public void Execute()
 		{
 			var lodIncrement = LodTable[lodIndex];
+			var isLod0 = lodIndex == 0;
+			isLowerLod = false;
 
 			// Loop through each "cube" in our terrain.
 			for (var x = 0; x < chunkSize - 1; x += lodIncrement)
 			for (var y = 0; y < chunkSize - 1; y += lodIncrement)
 			for (var z = 0; z < chunkSize - 1; z += lodIncrement)
 			{
-				// if (lodIndex != 0 && IsEdgeCube(x, y, z, lodIncrement)) continue;
+				if (!isLod0 && IsEdgeCube(x, y, z, lodIncrement)) continue;
 				CreateCube(x, y, z, lodIncrement);
+				
+				if (!isLod0)
+				{
+					if (isLowerLod)
+					{
+						lowerLodCubeCount++;
+					}
+					else
+					{
+						higherLodCubeCount++;
+					}
+				}
 			}
 			
-			// if (lodIndex != 0)
-			// {
-			// 	for (var x = 0; x < chunkSize - 1; x++)
-			// 	for (var y = 0; y < chunkSize - 1; y++)
-			// 	for (var z = 0; z < chunkSize - 1; z++)
-			// 	{
-			// 		if (IsEdgeCube(x, y, z))
-			// 		{
-			// 			CreateCube(x, y, z, 1);
-			// 		}
-			// 	}
-			// }
+			if (wasAdded) Debug.Log("Was Added");
+
+			if (!isLod0)
+			{
+				isLowerLod = true;
+				for (var x = 0; x < chunkSize - 1; x++)
+				for (var y = 0; y < chunkSize - 1; y++)
+				for (var z = 0; z < chunkSize - 1; z++)
+				{
+					if (IsEdgeCube(x, y, z))
+					{
+						CreateCube(x, y, z, 1);
+						if (isLowerLod)
+						{
+							lowerLodCubeCount++;
+						}
+						else
+						{
+							higherLodCubeCount++;
+						}
+					}
+				}
+
+				Debug.Log($"{lowerLodCubeCount} : {higherLodCubeCount}");
+				var lowerCount = 0;
+				for (var index = 0; index < higherLodCubeCount; index++)
+				{
+					var cubeEdgeTriangleData = higherLodData[index];
+					if (cubeEdgeTriangleData.count <= 2)
+					{
+						//if we only have 1 vertex, we create a new point
+						var newVert = (cubeEdgeTriangleData.vertex1 + higherLodData[index].vertex1) / 2;
+						cubeEdgeTriangleData.AddVertex(newVert);
+					}
+
+					// for (int i = lowerCount; i < lowerCount + lodIncrement; lowerCount++)
+					// {
+					// 	var lowerCube = lowerLodData[i];
+					//
+					// 	//1st triangle
+					// 	var vert1 = lowerCube.vertex1;
+					// 	var vert2 = cubeEdgeTriangleData.vertex1;
+					// 	var vert3 = lowerCube.vertex2;
+					//
+					// 	vertices[vertCount[0]] = vert1;
+					// 	triangles[triCount[0]] = vertCount[0];
+					// 	vertCount[0]++;
+					// 	triCount[0]++;
+					// 	vertices[vertCount[0]] = vert2;
+					// 	triangles[triCount[0]] = vertCount[0];
+					// 	vertCount[0]++;
+					// 	triCount[0]++;
+					// 	vertices[vertCount[0]] = vert3;
+					// 	triangles[triCount[0]] = vertCount[0];
+					// 	vertCount[0]++;
+					// 	triCount[0]++;
+					//
+					// 	//2nd triangle
+					// 	var vert4 = lowerCube.vertex2;
+					// 	var vert5 = cubeEdgeTriangleData.vertex1;
+					// 	var vert6 = cubeEdgeTriangleData.vertex2;
+					//
+					// 	vertices[vertCount[0]] = vert4;
+					// 	triangles[triCount[0]] = vertCount[0];
+					// 	vertCount[0]++;
+					// 	triCount[0]++;
+					// 	vertices[vertCount[0]] = vert5;
+					// 	triangles[triCount[0]] = vertCount[0];
+					// 	vertCount[0]++;
+					// 	triCount[0]++;
+					// 	vertices[vertCount[0]] = vert6;
+					// 	triangles[triCount[0]] = vertCount[0];
+					// 	vertCount[0]++;
+					// 	triCount[0]++;
+					//
+					// 	//3rd triangle
+					// 	if (lowerCube.vertex3 == Vector3.zero) continue;
+					// 	var vert7 = lowerCube.vertex2;
+					// 	var vert8 = cubeEdgeTriangleData.vertex2;
+					// 	var vert9 = lowerCube.vertex3;
+					// 	
+					// 	vertices[vertCount[0]] = vert7;
+					// 	triangles[triCount[0]] = vertCount[0];
+					// 	vertCount[0]++;
+					// 	triCount[0]++;
+					// 	vertices[vertCount[0]] = vert8;
+					// 	triangles[triCount[0]] = vertCount[0];
+					// 	vertCount[0]++;
+					// 	triCount[0]++;
+					// 	vertices[vertCount[0]] = vert9;
+					// 	triangles[triCount[0]] = vertCount[0];
+					// 	vertCount[0]++;
+					// 	triCount[0]++;
+					// 	
+					// 	//4th triangle
+					// 	if (cubeEdgeTriangleData.vertex3 == Vector3.zero) continue;
+					// 	var vert10 = lowerCube.vertex3;
+					// 	var vert11 = cubeEdgeTriangleData.vertex2;
+					// 	var vert12 = cubeEdgeTriangleData.vertex3;
+					// 	
+					// 	vertices[vertCount[0]] = vert10;
+					// 	triangles[triCount[0]] = vertCount[0];
+					// 	vertCount[0]++;
+					// 	triCount[0]++;
+					// 	vertices[vertCount[0]] = vert11;
+					// 	triangles[triCount[0]] = vertCount[0];
+					// 	vertCount[0]++;
+					// 	triCount[0]++;
+					// 	vertices[vertCount[0]] = vert12;
+					// 	triangles[triCount[0]] = vertCount[0];
+					// 	vertCount[0]++;
+					// 	triCount[0]++;
+					// 	
+					// 	//5th triangle
+					// 	if (lowerCube.vertex4 == Vector3.zero) continue;
+					// 	var vert13 = lowerCube.vertex3;
+					// 	var vert14 = cubeEdgeTriangleData.vertex3;
+					// 	var vert15 = lowerCube.vertex4;
+					// 	
+					// 	vertices[vertCount[0]] = vert13;
+					// 	triangles[triCount[0]] = vertCount[0];
+					// 	vertCount[0]++;
+					// 	triCount[0]++;
+					// 	vertices[vertCount[0]] = vert14;
+					// 	triangles[triCount[0]] = vertCount[0];
+					// 	vertCount[0]++;
+					// 	triCount[0]++;
+					// 	vertices[vertCount[0]] = vert15;
+					// 	triangles[triCount[0]] = vertCount[0];
+					// 	vertCount[0]++;
+					// 	triCount[0]++;
+					// }
+				}
+			}
+		}
+		
+		private bool IsEdgeCube(int x, int y, int z, int lodIncrement = 1)
+		{
+			return x == 0 || x == chunkSize - lodIncrement - 1 ||
+			       y == 0 || y == chunkSize - lodIncrement - 1 ||
+			       z == 0 || z == chunkSize - lodIncrement - 1;
+		}
+
+		private void AddToLodData(Vector3 vertPosition, int lodIncrement)
+		{
+			var increment = lodIndex == 0 ? 1 : lodIncrement;
+			if (vertPosition.x == increment || vertPosition.x == chunkSize - increment - 1 ||
+			    vertPosition.y == increment || vertPosition.y == chunkSize - increment - 1 || 
+			    vertPosition.z == increment || vertPosition.z == chunkSize - increment - 1)
+			{
+				var lodCubeCount = isLowerLod ? lowerLodCubeCount : higherLodCubeCount;
+				if (isLowerLod)
+				{
+					lowerLodData[lodCubeCount].AddVertex(vertPosition);
+					Debug.Log($"Added { vertPosition}");
+				}
+				else
+				{
+					higherLodData[lodCubeCount].AddVertex(vertPosition);
+				}
+			}
 		}
 
 		private void CreateCube(int x, int y, int z, int lodIncrement)
@@ -91,13 +307,6 @@ namespace TerrainBakery.Jobs
 
 			// Loop through the triangles. There are never more than 5 triangles to a cube and only three vertices to a triangle.
 			MarchCube(cubeIndex, position, lodIncrement);
-		}
-
-		private bool IsEdgeCube(int x, int y, int z, int lodIncrement = 1)
-		{
-			return x == 0 || x == chunkSize - lodIncrement - 1 ||
-			       y == 0 || y == chunkSize - lodIncrement - 1 ||
-			       z == 0 || z == chunkSize - lodIncrement - 1;
 		}
 
 		[BurstCompile]
@@ -148,13 +357,14 @@ namespace TerrainBakery.Jobs
 				// Add to our vertices and triangles list and increment the edgeIndex.
 				if (flatShaded)
 				{
+					AddToLodData(vertPosition, lodIncrement);
 					vertices[vertCount[0]] = vertPosition;
 					triangles[triCount[0]] = vertCount[0];
 					vertCount[0]++;
 				}
 				else
 				{
-					triangles[triCount[0]] = VertForIndice(vertPosition);
+					triangles[triCount[0]] = VertForIndice(vertPosition, lodIncrement);
 				}
 
 				edgeIndex++;
@@ -169,18 +379,23 @@ namespace TerrainBakery.Jobs
 		}
 
 		[BurstCompile]
-		private int VertForIndice(Vector3 vert)
+		private int VertForIndice(Vector3 vertPosition, int lodIncrement)
 		{
 			// Loop through all the vertices currently in the vertices list.
 			var vCount = vertCount[0];
 			for (var index = 0; index < vCount; index++)
 			{
 				// If we find a vert that matches ours, then simply return this index.
-				if (vertices[index] == vert) return index;
+				if (vertices[index] == vertPosition)
+				{
+					AddToLodData(vertPosition, lodIncrement);
+					return index;
+				}
 			}
 
 			// If we didn't find a match, add this vert to the list and return last index.
-			vertices[vCount] = vert;
+			AddToLodData(vertPosition, lodIncrement);
+			vertices[vCount] = vertPosition;
 			vertCount[0]++;
 			return vCount;
 		}
