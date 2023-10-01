@@ -93,8 +93,8 @@ public class Generator : MonoBehaviour
                 vertices = new NativeArray<Vector3>(90000, Allocator.TempJob),
                 triangles = new NativeArray<int>(90000, Allocator.TempJob),
                 lodIndex = 0 != 1 ? 1 : 0,
-                lowerLodData = new NativeArray<CubeEdgeTriangleData>(5768, Allocator.Persistent),
-                higherLodData = new NativeArray<CubeEdgeTriangleData>(2744, Allocator.Persistent)
+                lowerLodData = new NativeArray<Vector3>(5768, Allocator.Persistent),
+                higherLodData = new NativeArray<Vector3>(2744, Allocator.Persistent)
             };
 
             meshDataJob.Schedule().Complete();
@@ -136,43 +136,6 @@ public class Generator : MonoBehaviour
             meshFilter.mesh = meshFilterMesh;
             var meshRenderer = gameobject.AddComponent<MeshRenderer>();
             meshRenderer.material = Material;
-
-            foreach (var cubeEdgeTriangleData in meshDataJob.lowerLodData)
-            {
-                if (cubeEdgeTriangleData.vertex1 != Vector3.zero)
-                    verticesLower.Add(cubeEdgeTriangleData.vertex1 + chunkPosition);
-                if (cubeEdgeTriangleData.vertex2 != Vector3.zero)
-                    verticesLower.Add(cubeEdgeTriangleData.vertex2 + chunkPosition);
-                if (cubeEdgeTriangleData.vertex3 != Vector3.zero)
-                    verticesLower.Add(cubeEdgeTriangleData.vertex3 + chunkPosition);
-                if (cubeEdgeTriangleData.vertex4 != Vector3.zero)
-                    verticesLower.Add(cubeEdgeTriangleData.vertex4 + chunkPosition);
-
-                // var thing = Instantiate(test);
-                // thing.transform.position = cubeEdgeTriangleData.vertex1 + chunkPosition;
-                // thing.transform.localScale = new Vector3(1f, 1f, 1f);
-                //
-                // var thing2 = Instantiate(test);
-                // thing2.transform.position = cubeEdgeTriangleData.vertex2 + chunkPosition;
-                // thing2.transform.localScale = new Vector3(1f, 1f, 1f);
-                //
-                // var thing3 = Instantiate(test);
-                // thing3.transform.position = cubeEdgeTriangleData.vertex3 + chunkPosition;
-                // thing3.transform.localScale = new Vector3(1f, 1f, 1f);
-                //
-                // var thing4 = Instantiate(test);
-                // thing4.transform.position = cubeEdgeTriangleData.vertex4 + chunkPosition;
-                // thing4.transform.localScale = new Vector3(1f, 1f, 1f);
-
-            }
-            
-            foreach (var cubeEdgeTriangleData in meshDataJob.higherLodData)
-            {
-                verticesHigher.Add(cubeEdgeTriangleData.vertex1 + chunkPosition);
-                verticesHigher.Add(cubeEdgeTriangleData.vertex2 + chunkPosition);
-                verticesHigher.Add(cubeEdgeTriangleData.vertex3 + chunkPosition);
-                verticesHigher.Add(cubeEdgeTriangleData.vertex4 + chunkPosition);
-            }
 
             meshDataJob.cube.Dispose();
             meshDataJob.terrainMap.Dispose();
