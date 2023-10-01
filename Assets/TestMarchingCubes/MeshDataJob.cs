@@ -97,14 +97,14 @@ namespace TerrainBakery.Jobs
 					}
 				}
 				
-				for (var index = 0; index < lowerLodData.Length; index++)
-				{
-					Debug.Log(lowerLodData[index]);
-				}
-				for (var index = 0; index < higherLodData.Length; index++)
-				{
-					Debug.Log(higherLodData[index]);
-				}
+				// for (var index = 0; index < lowerLodData.Length; index++)
+				// {
+				// 	Debug.Log(lowerLodData[index]);
+				// }
+				// for (var index = 0; index < higherLodData.Length; index++)
+				// {
+				// 	Debug.Log(higherLodData[index]);
+				// }
 
 				var lower = new List<CubeEdgeTriangleData>();
 				var higher = new List<CubeEdgeTriangleData>();
@@ -219,10 +219,15 @@ namespace TerrainBakery.Jobs
 					}
 				}
 
+				Debug.Log(lower.Count);
+				Debug.Log(higher.Count);
+
 				var lowerCount = 0;
 				for (var index = 0; index < higher.Count; index++)
 				{
 					var cubeEdgeTriangleData = higher[index];
+					if (cubeEdgeTriangleData.vertex1 == default) continue;
+					
 					Vector3 newVert = default;
 					var needsNewVert = cubeEdgeTriangleData.count < 2;
 					if (needsNewVert)
@@ -231,7 +236,7 @@ namespace TerrainBakery.Jobs
 						newVert = (cubeEdgeTriangleData.vertex1 + higher[index].vertex1) / 2;
 					}
 
-					var lowerCopy = lowerCount  + lodIncrement;
+					var lowerCopy = Mathf.Min(lowerCount + lodIncrement, lower.Count);
 					for (int i = lowerCount; i < lowerCopy; i++)
 					{
 						var lowerCube = lower[i];
@@ -258,7 +263,7 @@ namespace TerrainBakery.Jobs
 						var vert4 = lowerCube.vertex2;
 						var vert5 = cubeEdgeTriangleData.vertex1;
 						var vert6 = needsNewVert ? newVert : cubeEdgeTriangleData.vertex2;
-					
+						
 						vertices[vertCount[0]] = vert4;
 						triangles[triCount[0]] = vertCount[0];
 						vertCount[0]++;
