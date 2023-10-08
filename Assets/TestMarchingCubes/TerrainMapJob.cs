@@ -83,7 +83,6 @@ namespace TerrainBakery.Jobs
 					domainWarpAmp);
 				
 				var distance = Vector3.Distance(new Vector3(xPos, yPos, zPos), Vector3.zero);
-				var planetFill = Mathf.Clamp01(distance / planetSize);
 				
 				var t = 1f - Mathf.Exp(-0.3f * (distance - (planetSize)));
 
