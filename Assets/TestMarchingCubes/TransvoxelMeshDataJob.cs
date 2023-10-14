@@ -1,142 +1,110 @@
-﻿using Unity.Burst;
+﻿using TestMarchingCubes;
+using Unity.Burst;
 using Unity.Collections;
 using Unity.Jobs;
-using Unity.Mathematics;
 using UnityEngine;
-using UnityEngine.Serialization;
-using static LookupTableTransvoxel;
 
 namespace TerrainBakery.Jobs
 {
-	// [BurstCompile]
+	[BurstCompile]
 	public struct TransvoxelMeshDataJob : IJob, IChunkJob
 	{
-		[ReadOnly]
-		public bool smoothTerrain;
-
-		[ReadOnly]
-		public bool flatShaded;
-
-		[ReadOnly]
-		public int chunkSize;
-
-		[ReadOnly]
-		public NativeArray<float> terrainMap;
-
-		[ReadOnly]
-		public float terrainSurface;
-
-		[ReadOnly]
-		public int lodIndex;
-
-		[FormerlySerializedAs("cube")]
-		public NativeArray<int> density;
+		[ReadOnly] public int chunkSize;
+		[ReadOnly] public NativeArray<float> terrainMap;
+		[ReadOnly] public int lod;
 		
-		public NativeArray<int> triCount;
-		public NativeArray<int> vertCount;
+		public NativeArray<Triangle> triangles;
+		public NativeArray<int> triangleCount;
+
+		private int lodIncrement;
 		
-		public NativeArray<Vector3> vertices;
-		public NativeArray<int> triangles;
-
-		private const float s = 1f / 256f;
-		private static int[] vertexIndices = new int[16];
-
 		[BurstCompile]
 		public void Execute()
 		{
-			var lodIncrement = LodTable[lodIndex];
-			var isLod0 = lodIndex == 0;
-
+			lodIncrement = TransvoxelTables.lodTable[lod];
+			
 			// Loop through each "cube" in our terrain.
-			for (var x = 0; x < chunkSize - 1; x += lodIncrement)
-			for (var y = 0; y < chunkSize - 1; y += lodIncrement)
-			for (var z = 0; z < chunkSize - 1; z += lodIncrement)
+			for (var x = 0; x < chunkSize; x += lodIncrement)
+			for (var y = 0; y < chunkSize; y += lodIncrement)
+			for (var z = 0; z < chunkSize; z += lodIncrement)
 			{
-				if (!isLod0 && IsEdgeCube(x, y, z, lodIncrement)) continue;
-				CreateCube(x, y, z, lodIncrement);
-			}
-
-			if (!isLod0)
-			{
-				for (var x = 0; x < chunkSize - 1; x++)
-				for (var y = 0; y < chunkSize - 1; y++)
-				for (var z = 0; z < chunkSize - 1; z++)
-				{
-					if (IsEdgeCube(x, y, z))
-					{
-						CreateCube(x, y, z, 1);
-					}
-				}
+				CreateCube(new Vector3Int(x, y, z));
 			}
 		}
-		
-		[BurstCompile]
-		private bool IsEdgeCube(int x, int y, int z, int lodIncrement = 1)
+
+		private void CreateCube(Vector3Int cellPosition)
 		{
-			return x == 0 || x == chunkSize - lodIncrement - 1 ||
-			       y == 0 || y == chunkSize - lodIncrement - 1 ||
-			       z == 0 || z == chunkSize - lodIncrement - 1;
-		}
-		
-		[BurstCompile]
-		private void CreateCube(int x, int y, int z, int lodIncrement)
-		{
-			// Create an array of floats representing each corner of a cube and get the value from our terrainMap.
-			for (var i = 0; i < 8; i++)
-			{
-				var terrain = SampleTerrainMap(new int3(x, y, z) + cornerIndex[i] * lodIncrement);
-				density[i] = Mathf.RoundToInt(Mathf.Abs(terrain));
+			var padding = 1;
+			var cellValues = new float[8];
+			
+			for (var i = 0; i < 8; ++i) {
+				var voxelPosition = cellPosition + new Vector3Int(padding, padding, padding) + TransvoxelTables.RegularCornerOffset[i] * lodIncrement;
+				cellValues[i] = SampleTerrainMap(voxelPosition);
 			}
+			
+			var caseCode = ((cellValues[0] < 0 ? 0x01 : 0)
+			                | (cellValues[1] < 0 ? 0x02 : 0)
+			                | (cellValues[2] < 0 ? 0x04 : 0)
+			                | (cellValues[3] < 0 ? 0x08 : 0)
+			                | (cellValues[4] < 0 ? 0x10 : 0)
+			                | (cellValues[5] < 0 ? 0x20 : 0)
+			                | (cellValues[6] < 0 ? 0x40 : 0)
+			                | (cellValues[7] < 0 ? 0x80 : 0));
 
-			var cubeIndex = 0;
-			for (var i = 0; i < 8; i++)
-				// If it is, use bit-magic to the set the corresponding bit to 1. So if only the 3rd point in the cube was below
-				// the surface, the bit would look like 00100000, which represents the integer value 32.
-				if (density[i] > terrainSurface)
-					cubeIndex |= 1 << i;
-
-
-			// If the configuration of this cube is 0 or 255 (completely inside the terrain or completely outside of it) we don't need to do anything.
-			if (cubeIndex is 0 or 255)
+			if (caseCode == 0 || caseCode == 255) {
 				return;
+			}
+			
+			CreateCubeTriangles(cellPosition, caseCode, cellValues);
+		}
 
-			byte cellClass = RegularCellClass[cubeIndex];
-			int[] vertexLocations = RegularVertexData[cubeIndex];
+		private void CreateCubeTriangles(Vector3Int cellPosition, int caseCode, float[] cellValues)
+		{
+			int cellClass = TransvoxelTables.RegularCellClass[caseCode];
+			ref var edgeCodes = ref TransvoxelTables.RegularVertexData[caseCode];
+			ref var cellData = ref TransvoxelTables.RegularCellData[cellClass];
 
-			long vertexCount = Geos[cellClass] >> 4;
-			long triangleCount = Geos[cellClass] & 0x0F;
-
-			for (int i = 0; i < vertexCount; i++)
+			var cellVertCount = cellData.GetVertexCount();
+			var indices = cellData.GetIndices();
+			
+			var verts = new Vector3[cellVertCount];
+			for (var i = 0; i < cellVertCount; ++i)
 			{
-				ushort edge = (ushort)(vertexLocations[i] & 255);
-				byte v0 = (byte)((edge >> 4) & 0x0F); //First Corner Index
-				byte v1 = (byte)(edge & 0x0F); //Second Corner Index
+				var edgeCode = edgeCodes[i];
 
-				int3 cornerOffset = density[v0] == 0 
-					? cornerIndex [v0]
-					: cornerIndex [v1];
+				var cornerIdx0 = (ushort)((edgeCode >> 4) & 0x0F);
+				var cornerIdx1 = (ushort)(edgeCode & 0x0F);
 
-				int vertPosX = x + cornerOffset.x;
-				int vertPosY = y + cornerOffset.y;
-				int vertPosZ = z + cornerOffset.z;
+				var density0 = cellValues[cornerIdx0];
+				var density1 = cellValues[cornerIdx1];
+				
+				var t0 = density1 / (density1 - density0);
+				var t1 = 1 - t0;
+				
+				var vertLocalPos0 = cellPosition + TransvoxelTables.RegularCornerOffset[cornerIdx0];
+				var vertLocalPos1 = cellPosition + TransvoxelTables.RegularCornerOffset[cornerIdx1];
 
-				vertices[vertCount[0]] = new Vector3(vertPosX, vertPosY, vertPosZ);
-				vertCount[0]+=1;
-				vertexIndices[i] = vertCount[0] - 1;
+				Vector3 vert0Copy = vertLocalPos0;
+				Vector3 vert1Copy = vertLocalPos1;
+				
+				var vertex = vert0Copy * t0 + vert1Copy * t1;
+				verts[i] = vertex * lodIncrement;
 			}
 
-			var triangleIndices = LookupTableTransvoxel.RegularCellData[cellClass].vertexIndex;
-			for (int i = 0; i < triangleCount; i += 3)
+			var cellTriCount = cellData.GetTriangleCount();
+			for (var i = 0; i < cellTriCount; i++)
 			{
-				triangles[triCount[0]] = vertexIndices[triangleIndices[i]];
-				triangles[triCount[0] + 1] = vertexIndices[triangleIndices[i + 1]];
-				triangles[triCount[0] + 2] = vertexIndices[triangleIndices[i + 2]];
-				triCount[0]+=3;
+				triangles[triangleCount[0]] = new Triangle(
+					verts[indices[i * 3]],
+					verts[indices[i * 3 + 1]],
+					verts[indices[i * 3 + 2]]
+				);
+				triangleCount[0]++;
 			}
 		}
-		
+
 		[BurstCompile]
-		private float SampleTerrainMap(int3 corner)
+		private float SampleTerrainMap(Vector3Int corner)
 		{
 			return terrainMap[corner.x + chunkSize * (corner.y + chunkSize * corner.z)];
 		}
