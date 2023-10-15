@@ -1,6 +1,4 @@
-﻿
-using Unity.Mathematics;
-using UnityEngine;
+﻿using UnityEngine;
 
 public class RegularCellData
 {
@@ -34,7 +32,7 @@ public class RegularCellData
     }
 }
 
-public class TransvoxelTables
+public static class TransvoxelTables
 {
 	public static readonly int[] lodTable = {
 		1,
@@ -46,31 +44,31 @@ public class TransvoxelTables
 	
 	public static readonly Vector3Int[] RegularCornerOffset =
 	{
-		new Vector3Int(0,0,0), // 0         6-------7
-		new Vector3Int(1,0,0), // 1        /|      /|
-		new Vector3Int(0,0,1), // 2	      / |     / |  Corners
-		new Vector3Int(1,0,1), // 3	     4-------5  |
-		new Vector3Int(0,1,0), // 4	     |  2----|--3
-		new Vector3Int(1,1,0), // 5	     | /     | /   y z
-		new Vector3Int(0,1,1), // 6	     |/      |/    |/
-		new Vector3Int(1,1,1)  // 7	     0-------1     o--x
+		new(0,0,0), // 0         6-------7
+		new(1,0,0), // 1        /|      /|
+		new(0,0,1), // 2	      / |     / |  Corners
+		new(1,0,1), // 3	     4-------5  |
+		new(0,1,0), // 4	     |  2----|--3
+		new(1,1,0), // 5	     | /     | /   y z
+		new(0,1,1), // 6	     |/      |/    |/
+		new(1,1,1)  // 7	     0-------1     o--x
 	};
 
 	public static readonly Vector3Int[] TransitionCornerOffset =
 	{
-		new Vector3Int(0,0,0), // 0	        B-----------C
-		new Vector3Int(1,0,0), // 1         /|          /|
-		new Vector3Int(2,0,0), // 2        / |         / |	         
-		new Vector3Int(0,1,0), // 3       /  |        /  |                       
-		new Vector3Int(1,1,0), // 4      6-----7-----8   |	    Corners      	   
-		new Vector3Int(2,1,0), // 5      |   | |     |   |
-		new Vector3Int(0,2,0), // 6      |   9 |-----|-- A      y z	
-		new Vector3Int(1,2,0), // 7      3-----4-----5  /       |/       
-		new Vector3Int(2,2,0), // 8      | /   |     | /        o--x	        	   
-		new Vector3Int(0,0,2), // 9      |/    |     |/	           
-		new Vector3Int(2,0,2), // A	    0-----1-----2               
-		new Vector3Int(0,2,2), // B	   
-		new Vector3Int(2,2,2)  // C
+		new(0,0,0), // 0	        B-----------C
+		new(1,0,0), // 1         /|          /|
+		new(2,0,0), // 2        / |         / |	         
+		new(0,1,0), // 3       /  |        /  |                       
+		new(1,1,0), // 4      6-----7-----8   |	    Corners      	   
+		new(2,1,0), // 5      |   | |     |   |
+		new(0,2,0), // 6      |   9 |-----|-- A      y z	
+		new(1,2,0), // 7      3-----4-----5  /       |/       
+		new(2,2,0), // 8      | /   |     | /        o--x	        	   
+		new(0,0,2), // 9      |/    |     |/	           
+		new(2,0,2), // A	    0-----1-----2               
+		new(0,2,2), // B	   
+		new(2,2,2)  // C
 	};
 
 	// 256
@@ -96,22 +94,22 @@ public class TransvoxelTables
 
 	public static readonly RegularCellData[] RegularCellData =
 	{
-		new RegularCellData(0x00, new byte[]{}),
-		new RegularCellData(0x31, new byte[]{0, 1, 2}),
-		new RegularCellData(0x62, new byte[]{0, 1, 2, 3, 4, 5}),
-		new RegularCellData(0x42, new byte[]{0, 1, 2, 0, 2, 3}),
-		new RegularCellData(0x53, new byte[]{0, 1, 4, 1, 3, 4, 1, 2, 3}),
-		new RegularCellData(0x73, new byte[]{0, 1, 2, 0, 2, 3, 4, 5, 6}),
-		new RegularCellData(0x93, new byte[]{0, 1, 2, 3, 4, 5, 6, 7, 8}),
-		new RegularCellData(0x84, new byte[]{0, 1, 4, 1, 3, 4, 1, 2, 3, 5, 6, 7}),
-		new RegularCellData(0x84, new byte[]{0, 1, 2, 0, 2, 3, 4, 5, 6, 4, 6, 7}),
-		new RegularCellData(0xC4, new byte[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11}),
-		new RegularCellData(0x64, new byte[]{0, 4, 5, 0, 1, 4, 1, 3, 4, 1, 2, 3}),
-		new RegularCellData(0x64, new byte[]{0, 5, 4, 0, 4, 1, 1, 4, 3, 1, 3, 2}),
-		new RegularCellData(0x64, new byte[]{0, 4, 5, 0, 3, 4, 0, 1, 3, 1, 2, 3}),
-		new RegularCellData(0x64, new byte[]{0, 1, 2, 0, 2, 3, 0, 3, 4, 0, 4, 5}),
-		new RegularCellData(0x75, new byte[]{0, 1, 2, 0, 2, 3, 0, 3, 4, 0, 4, 5, 0, 5, 6}),
-		new RegularCellData(0x95, new byte[]{0, 4, 5, 0, 3, 4, 0, 1, 3, 1, 2, 3, 6, 7, 8})
+		new(0x00, new byte[]{}),
+		new(0x31, new byte[]{0, 1, 2}),
+		new(0x62, new byte[]{0, 1, 2, 3, 4, 5}),
+		new(0x42, new byte[]{0, 1, 2, 0, 2, 3}),
+		new(0x53, new byte[]{0, 1, 4, 1, 3, 4, 1, 2, 3}),
+		new(0x73, new byte[]{0, 1, 2, 0, 2, 3, 4, 5, 6}),
+		new(0x93, new byte[]{0, 1, 2, 3, 4, 5, 6, 7, 8}),
+		new(0x84, new byte[]{0, 1, 4, 1, 3, 4, 1, 2, 3, 5, 6, 7}),
+		new(0x84, new byte[]{0, 1, 2, 0, 2, 3, 4, 5, 6, 4, 6, 7}),
+		new(0xC4, new byte[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11}),
+		new(0x64, new byte[]{0, 4, 5, 0, 1, 4, 1, 3, 4, 1, 2, 3}),
+		new(0x64, new byte[]{0, 5, 4, 0, 4, 1, 1, 4, 3, 1, 3, 2}),
+		new(0x64, new byte[]{0, 4, 5, 0, 3, 4, 0, 1, 3, 1, 2, 3}),
+		new(0x64, new byte[]{0, 1, 2, 0, 2, 3, 0, 3, 4, 0, 4, 5}),
+		new(0x75, new byte[]{0, 1, 2, 0, 2, 3, 0, 3, 4, 0, 4, 5, 0, 5, 6}),
+		new(0x95, new byte[]{0, 4, 5, 0, 3, 4, 0, 1, 3, 1, 2, 3, 6, 7, 8})
 	};
 
 	public static readonly ushort[][] RegularVertexData =
@@ -374,8 +372,7 @@ public class TransvoxelTables
 		new ushort[] {}
 	};
 
-	public static readonly byte[] TransitionCellClass = new byte[]
-	{
+	public static readonly byte[] TransitionCellClass = {
 		0x00, 0x01, 0x02, 0x84, 0x01, 0x05, 0x04, 0x04, 0x02, 0x87, 0x09, 0x8C, 0x84, 0x0B, 0x05, 0x05,
 		0x01, 0x08, 0x07, 0x8D, 0x05, 0x0F, 0x8B, 0x0B, 0x04, 0x0D, 0x0C, 0x1C, 0x04, 0x8B, 0x85, 0x85,
 		0x02, 0x07, 0x09, 0x8C, 0x87, 0x10, 0x0C, 0x0C, 0x09, 0x12, 0x15, 0x9A, 0x8C, 0x19, 0x90, 0x10,
@@ -410,73 +407,70 @@ public class TransvoxelTables
 		0x85, 0x85, 0x8B, 0x04, 0xA6, 0x25, 0x07, 0x82, 0x84, 0x84, 0x85, 0x81, 0x04, 0x82, 0x81, 0x80
 	};
 
-	public static readonly RegularCellData[] TransitionRegularCellData = new RegularCellData[]
-	{
-		new RegularCellData(0x00, new byte[] {}),
-		new RegularCellData(0x42, new byte[] {0, 1, 3, 1, 2, 3}),
-		new RegularCellData(0x31, new byte[] {0, 1, 2}),
-		new RegularCellData(0x42, new byte[] {0, 1, 2, 0, 2, 3}),
-		new RegularCellData(0x53, new byte[] {0, 1, 4, 1, 3, 4, 1, 2, 3}),
-		new RegularCellData(0x64, new byte[] {0, 1, 5, 1, 2, 5, 2, 4, 5, 2, 3, 4}),
-		new RegularCellData(0x84, new byte[] {0, 1, 3, 1, 2, 3, 4, 5, 6, 4, 6, 7}),
-		new RegularCellData(0x73, new byte[] {0, 1, 3, 1, 2, 3, 4, 5, 6}),
-		new RegularCellData(0x84, new byte[] {0, 1, 3, 1, 2, 3, 4, 5, 7, 5, 6, 7}),
-		new RegularCellData(0x62, new byte[] {0, 1, 2, 3, 4, 5}),
-		new RegularCellData(0x53, new byte[] {0, 1, 3, 0, 3, 4, 1, 2, 3}),
-		new RegularCellData(0x75, new byte[] {0, 1, 6, 1, 2, 6, 2, 5, 6, 2, 3, 5, 3, 4, 5}),
-		new RegularCellData(0x84, new byte[] {0, 1, 4, 1, 3, 4, 1, 2, 3, 5, 6, 7}),
-		new RegularCellData(0x95, new byte[] {0, 1, 4, 1, 3, 4, 1, 2, 3, 5, 6, 8, 6, 7, 8}),
-		new RegularCellData(0xA6, new byte[] {0, 1, 5, 1, 2, 5, 2, 4, 5, 2, 3, 4, 6, 7, 8, 6, 8, 9}),
-		new RegularCellData(0x86, new byte[] {0, 1, 7, 1, 2, 7, 2, 3, 7, 3, 6, 7, 3, 4, 6, 4, 5, 6}),
-		new RegularCellData(0x95, new byte[] {0, 1, 5, 1, 2, 5, 2, 4, 5, 2, 3, 4, 6, 7, 8}),
-		new RegularCellData(0x95, new byte[] {0, 1, 3, 1, 2, 3, 4, 5, 7, 4, 7, 8, 5, 6, 7}),
-		new RegularCellData(0xA4, new byte[] {0, 1, 3, 1, 2, 3, 4, 5, 6, 7, 8, 9}),
-		new RegularCellData(0xC6, new byte[] {0, 1, 3, 1, 2, 3, 4, 5, 7, 5, 6, 7, 8, 9, 10, 8, 10, 11}),
-		new RegularCellData(0x64, new byte[] {0, 1, 3, 1, 2, 3, 0, 3, 4, 0, 4, 5}),
-		new RegularCellData(0x93, new byte[] {0, 1, 2, 3, 4, 5, 6, 7, 8}),
-		new RegularCellData(0x64, new byte[] {0, 1, 4, 0, 4, 5, 1, 3, 4, 1, 2, 3}),
-		new RegularCellData(0x97, new byte[] {0, 1, 8, 1, 7, 8, 1, 2, 7, 2, 3, 7, 3, 4, 7, 4, 5, 7, 5, 6, 7}),
-		new RegularCellData(0xB7, new byte[] {0, 1, 6, 1, 2, 6, 2, 5, 6, 2, 3, 5, 3, 4, 5, 7, 8, 10, 8, 9, 10}),
-		new RegularCellData(0xA6, new byte[] {0, 1, 6, 1, 2, 6, 2, 5, 6, 2, 3, 5, 3, 4, 5, 7, 8, 9}),
-		new RegularCellData(0xB5, new byte[] {0, 1, 4, 1, 3, 4, 1, 2, 3, 5, 6, 7, 8, 9, 10}),
-		new RegularCellData(0xA6, new byte[] {0, 1, 5, 1, 2, 5, 2, 4, 5, 2, 3, 4, 6, 7, 9, 7, 8, 9}),
-		new RegularCellData(0xA6, new byte[] {0, 1, 4, 1, 3, 4, 1, 2, 3, 5, 6, 9, 6, 8, 9, 6, 7, 8}),
-		new RegularCellData(0x97, new byte[] {0, 1, 8, 1, 2, 8, 2, 3, 8, 3, 7, 8, 3, 4, 7, 4, 5, 7, 5, 6, 7}),
-		new RegularCellData(0x86, new byte[] {0, 1, 7, 1, 6, 7, 1, 2, 6, 2, 5, 6, 2, 4, 5, 2, 3, 4}),
-		new RegularCellData(0xC8, new byte[] {0, 1, 7, 1, 2, 7, 2, 3, 7, 3, 6, 7, 3, 4, 6, 4, 5, 6, 8, 9, 10, 8, 10, 11}),
-		new RegularCellData(0xB7, new byte[] {0, 1, 5, 1, 2, 5, 2, 4, 5, 2, 3, 4, 6, 9, 10, 6, 7, 9, 7, 8, 9}),
-		new RegularCellData(0x75, new byte[] {0, 1, 6, 1, 3, 6, 1, 2, 3, 3, 4, 6, 4, 5, 6}),
-		new RegularCellData(0xA6, new byte[] {0, 1, 3, 1, 2, 3, 4, 5, 9, 5, 8, 9, 5, 6, 8, 6, 7, 8}),
-		new RegularCellData(0xC4, new byte[] {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11}),
-		new RegularCellData(0x86, new byte[] {1, 2, 4, 2, 3, 4, 0, 1, 7, 1, 4, 7, 4, 6, 7, 4, 5, 6}),
-		new RegularCellData(0x64, new byte[] {0, 4, 5, 0, 1, 4, 1, 3, 4, 1, 2, 3}),
-		new RegularCellData(0x86, new byte[] {0, 1, 4, 1, 3, 4, 1, 2, 3, 0, 4, 7, 4, 6, 7, 4, 5, 6}),
-		new RegularCellData(0x97, new byte[] {1, 2, 3, 1, 3, 4, 1, 4, 5, 0, 1, 8, 1, 5, 8, 5, 7, 8, 5, 6, 7}),
-		new RegularCellData(0xA6, new byte[] {0, 1, 3, 1, 2, 3, 4, 5, 9, 5, 8, 9, 5, 6, 8, 6, 7, 8}),
-		new RegularCellData(0xC8, new byte[] {0, 1, 5, 1, 2, 5, 2, 4, 5, 2, 3, 4, 6, 7, 11, 7, 10, 11, 7, 8, 10, 8, 9, 10}),
-		new RegularCellData(0x97, new byte[] {0, 1, 8, 1, 2, 8, 2, 7, 8, 2, 3, 7, 3, 6, 7, 3, 4, 6, 4, 5, 6}),
-		new RegularCellData(0x97, new byte[] {0, 1, 4, 1, 3, 4, 1, 2, 3, 0, 4, 8, 4, 7, 8, 4, 5, 7, 5, 6, 7}),
-		new RegularCellData(0xB7, new byte[] {0, 1, 5, 1, 2, 5, 2, 4, 5, 2, 3, 4, 6, 7, 10, 7, 9, 10, 7, 8, 9}),
-		new RegularCellData(0xA8, new byte[] {0, 1, 9, 1, 2, 9, 2, 8, 9, 2, 3, 8, 3, 7, 8, 3, 4, 7, 4, 6, 7, 4, 5, 6}),
-		new RegularCellData(0xB9, new byte[] {0, 1, 7, 1, 6, 7, 1, 2, 6, 2, 5, 6, 2, 3, 5, 3, 4, 5, 0, 7, 10, 7, 9, 10, 7, 8, 9}),
-		new RegularCellData(0xA6, new byte[] {0, 1, 5, 1, 4, 5, 1, 2, 4, 2, 3, 4, 6, 7, 9, 7, 8, 9}),
-		new RegularCellData(0xC6, new byte[] {0, 1, 5, 1, 2, 5, 2, 4, 5, 2, 3, 4, 6, 7, 8, 9, 10, 11}),
-		new RegularCellData(0xB7, new byte[] {0, 1, 7, 1, 2, 7, 2, 3, 7, 3, 6, 7, 3, 4, 6, 4, 5, 6, 8, 9, 10}),
-		new RegularCellData(0xA8, new byte[] {1, 2, 3, 1, 3, 4, 1, 4, 6, 4, 5, 6, 0, 1, 9, 1, 6, 9, 6, 8, 9, 6, 7, 8}),
-		new RegularCellData(0xCC, new byte[] {0, 1, 9, 1, 8, 9, 1, 2, 8, 2, 11, 8, 2, 3, 11, 3, 4, 11, 4, 5, 11, 5, 10, 11, 5, 6, 10, 6, 9, 10, 6, 7, 9, 7, 0, 9}),
-		new RegularCellData(0x86, new byte[] {0, 1, 2, 0, 2, 3, 0, 6, 7, 0, 3, 6, 1, 4, 5, 1, 5, 2}),
-		new RegularCellData(0x97, new byte[] {0, 1, 4, 1, 3, 4, 1, 2, 3, 2, 5, 6, 2, 6, 3, 0, 7, 8, 0, 4, 7}),
-		new RegularCellData(0xA8, new byte[] {0, 1, 5, 1, 4, 5, 1, 2, 4, 2, 3, 4, 3, 6, 7, 3, 7, 4, 0, 8, 9, 0, 5, 8}),
-		new RegularCellData(0xA8, new byte[] {0, 1, 5, 1, 4, 5, 1, 2, 4, 2, 3, 4, 2, 6, 3, 3, 6, 7, 0, 8, 9, 0, 5, 8})
+	public static readonly RegularCellData[] TransitionRegularCellData = {
+		new(0x00, new byte[] {}),
+		new(0x42, new byte[] {0, 1, 3, 1, 2, 3}),
+		new(0x31, new byte[] {0, 1, 2}),
+		new(0x42, new byte[] {0, 1, 2, 0, 2, 3}),
+		new(0x53, new byte[] {0, 1, 4, 1, 3, 4, 1, 2, 3}),
+		new(0x64, new byte[] {0, 1, 5, 1, 2, 5, 2, 4, 5, 2, 3, 4}),
+		new(0x84, new byte[] {0, 1, 3, 1, 2, 3, 4, 5, 6, 4, 6, 7}),
+		new(0x73, new byte[] {0, 1, 3, 1, 2, 3, 4, 5, 6}),
+		new(0x84, new byte[] {0, 1, 3, 1, 2, 3, 4, 5, 7, 5, 6, 7}),
+		new(0x62, new byte[] {0, 1, 2, 3, 4, 5}),
+		new(0x53, new byte[] {0, 1, 3, 0, 3, 4, 1, 2, 3}),
+		new(0x75, new byte[] {0, 1, 6, 1, 2, 6, 2, 5, 6, 2, 3, 5, 3, 4, 5}),
+		new(0x84, new byte[] {0, 1, 4, 1, 3, 4, 1, 2, 3, 5, 6, 7}),
+		new(0x95, new byte[] {0, 1, 4, 1, 3, 4, 1, 2, 3, 5, 6, 8, 6, 7, 8}),
+		new(0xA6, new byte[] {0, 1, 5, 1, 2, 5, 2, 4, 5, 2, 3, 4, 6, 7, 8, 6, 8, 9}),
+		new(0x86, new byte[] {0, 1, 7, 1, 2, 7, 2, 3, 7, 3, 6, 7, 3, 4, 6, 4, 5, 6}),
+		new(0x95, new byte[] {0, 1, 5, 1, 2, 5, 2, 4, 5, 2, 3, 4, 6, 7, 8}),
+		new(0x95, new byte[] {0, 1, 3, 1, 2, 3, 4, 5, 7, 4, 7, 8, 5, 6, 7}),
+		new(0xA4, new byte[] {0, 1, 3, 1, 2, 3, 4, 5, 6, 7, 8, 9}),
+		new(0xC6, new byte[] {0, 1, 3, 1, 2, 3, 4, 5, 7, 5, 6, 7, 8, 9, 10, 8, 10, 11}),
+		new(0x64, new byte[] {0, 1, 3, 1, 2, 3, 0, 3, 4, 0, 4, 5}),
+		new(0x93, new byte[] {0, 1, 2, 3, 4, 5, 6, 7, 8}),
+		new(0x64, new byte[] {0, 1, 4, 0, 4, 5, 1, 3, 4, 1, 2, 3}),
+		new(0x97, new byte[] {0, 1, 8, 1, 7, 8, 1, 2, 7, 2, 3, 7, 3, 4, 7, 4, 5, 7, 5, 6, 7}),
+		new(0xB7, new byte[] {0, 1, 6, 1, 2, 6, 2, 5, 6, 2, 3, 5, 3, 4, 5, 7, 8, 10, 8, 9, 10}),
+		new(0xA6, new byte[] {0, 1, 6, 1, 2, 6, 2, 5, 6, 2, 3, 5, 3, 4, 5, 7, 8, 9}),
+		new(0xB5, new byte[] {0, 1, 4, 1, 3, 4, 1, 2, 3, 5, 6, 7, 8, 9, 10}),
+		new(0xA6, new byte[] {0, 1, 5, 1, 2, 5, 2, 4, 5, 2, 3, 4, 6, 7, 9, 7, 8, 9}),
+		new(0xA6, new byte[] {0, 1, 4, 1, 3, 4, 1, 2, 3, 5, 6, 9, 6, 8, 9, 6, 7, 8}),
+		new(0x97, new byte[] {0, 1, 8, 1, 2, 8, 2, 3, 8, 3, 7, 8, 3, 4, 7, 4, 5, 7, 5, 6, 7}),
+		new(0x86, new byte[] {0, 1, 7, 1, 6, 7, 1, 2, 6, 2, 5, 6, 2, 4, 5, 2, 3, 4}),
+		new(0xC8, new byte[] {0, 1, 7, 1, 2, 7, 2, 3, 7, 3, 6, 7, 3, 4, 6, 4, 5, 6, 8, 9, 10, 8, 10, 11}),
+		new(0xB7, new byte[] {0, 1, 5, 1, 2, 5, 2, 4, 5, 2, 3, 4, 6, 9, 10, 6, 7, 9, 7, 8, 9}),
+		new(0x75, new byte[] {0, 1, 6, 1, 3, 6, 1, 2, 3, 3, 4, 6, 4, 5, 6}),
+		new(0xA6, new byte[] {0, 1, 3, 1, 2, 3, 4, 5, 9, 5, 8, 9, 5, 6, 8, 6, 7, 8}),
+		new(0xC4, new byte[] {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11}),
+		new(0x86, new byte[] {1, 2, 4, 2, 3, 4, 0, 1, 7, 1, 4, 7, 4, 6, 7, 4, 5, 6}),
+		new(0x64, new byte[] {0, 4, 5, 0, 1, 4, 1, 3, 4, 1, 2, 3}),
+		new(0x86, new byte[] {0, 1, 4, 1, 3, 4, 1, 2, 3, 0, 4, 7, 4, 6, 7, 4, 5, 6}),
+		new(0x97, new byte[] {1, 2, 3, 1, 3, 4, 1, 4, 5, 0, 1, 8, 1, 5, 8, 5, 7, 8, 5, 6, 7}),
+		new(0xA6, new byte[] {0, 1, 3, 1, 2, 3, 4, 5, 9, 5, 8, 9, 5, 6, 8, 6, 7, 8}),
+		new(0xC8, new byte[] {0, 1, 5, 1, 2, 5, 2, 4, 5, 2, 3, 4, 6, 7, 11, 7, 10, 11, 7, 8, 10, 8, 9, 10}),
+		new(0x97, new byte[] {0, 1, 8, 1, 2, 8, 2, 7, 8, 2, 3, 7, 3, 6, 7, 3, 4, 6, 4, 5, 6}),
+		new(0x97, new byte[] {0, 1, 4, 1, 3, 4, 1, 2, 3, 0, 4, 8, 4, 7, 8, 4, 5, 7, 5, 6, 7}),
+		new(0xB7, new byte[] {0, 1, 5, 1, 2, 5, 2, 4, 5, 2, 3, 4, 6, 7, 10, 7, 9, 10, 7, 8, 9}),
+		new(0xA8, new byte[] {0, 1, 9, 1, 2, 9, 2, 8, 9, 2, 3, 8, 3, 7, 8, 3, 4, 7, 4, 6, 7, 4, 5, 6}),
+		new(0xB9, new byte[] {0, 1, 7, 1, 6, 7, 1, 2, 6, 2, 5, 6, 2, 3, 5, 3, 4, 5, 0, 7, 10, 7, 9, 10, 7, 8, 9}),
+		new(0xA6, new byte[] {0, 1, 5, 1, 4, 5, 1, 2, 4, 2, 3, 4, 6, 7, 9, 7, 8, 9}),
+		new(0xC6, new byte[] {0, 1, 5, 1, 2, 5, 2, 4, 5, 2, 3, 4, 6, 7, 8, 9, 10, 11}),
+		new(0xB7, new byte[] {0, 1, 7, 1, 2, 7, 2, 3, 7, 3, 6, 7, 3, 4, 6, 4, 5, 6, 8, 9, 10}),
+		new(0xA8, new byte[] {1, 2, 3, 1, 3, 4, 1, 4, 6, 4, 5, 6, 0, 1, 9, 1, 6, 9, 6, 8, 9, 6, 7, 8}),
+		new(0xCC, new byte[] {0, 1, 9, 1, 8, 9, 1, 2, 8, 2, 11, 8, 2, 3, 11, 3, 4, 11, 4, 5, 11, 5, 10, 11, 5, 6, 10, 6, 9, 10, 6, 7, 9, 7, 0, 9}),
+		new(0x86, new byte[] {0, 1, 2, 0, 2, 3, 0, 6, 7, 0, 3, 6, 1, 4, 5, 1, 5, 2}),
+		new(0x97, new byte[] {0, 1, 4, 1, 3, 4, 1, 2, 3, 2, 5, 6, 2, 6, 3, 0, 7, 8, 0, 4, 7}),
+		new(0xA8, new byte[] {0, 1, 5, 1, 4, 5, 1, 2, 4, 2, 3, 4, 3, 6, 7, 3, 7, 4, 0, 8, 9, 0, 5, 8}),
+		new(0xA8, new byte[] {0, 1, 5, 1, 4, 5, 1, 2, 4, 2, 3, 4, 2, 6, 3, 3, 6, 7, 0, 8, 9, 0, 5, 8})
 	};
 
-	public static readonly byte[] TransitionCornerData = new byte[]
-	{
+	public static readonly byte[] TransitionCornerData = {
 		0x30, 0x21, 0x20, 0x12, 0x40, 0x82, 0x10, 0x81, 0x80, 0x37, 0x27, 0x17, 0x87
 	};
 
-	public static readonly ushort[][] TransitionVertexData = new ushort[][]
-	{
+	public static readonly ushort[][] TransitionVertexData = {
 		new ushort[] {},
 		new ushort[] {0x2301, 0x1503, 0x199B, 0x289A},
 		new ushort[] {0x2301, 0x2412, 0x4514},

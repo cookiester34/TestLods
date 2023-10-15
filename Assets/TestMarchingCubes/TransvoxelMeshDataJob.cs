@@ -24,33 +24,43 @@ namespace TerrainBakery.Jobs
 			lodIncrement = TransvoxelTables.lodTable[lod];
 			
 			// Loop through each "cube" in our terrain.
-			for (var x = 0; x < chunkSize; x += lodIncrement)
-			for (var y = 0; y < chunkSize; y += lodIncrement)
-			for (var z = 0; z < chunkSize; z += lodIncrement)
+			for (var x = 0; x < chunkSize - 2; x += lodIncrement)
+			for (var y = 0; y < chunkSize - 2; y += lodIncrement)
+			for (var z = 0; z < chunkSize - 2; z += lodIncrement)
 			{
+				if (lodIncrement != 1 && IsEdgeCube(x, y, z))
+				{
+					continue;
+				}
 				CreateCube(new Vector3Int(x, y, z));
 			}
+		}
+		
+		private bool IsEdgeCube(int x, int y, int z)
+		{
+			return x == 0 || x == chunkSize - lodIncrement ||
+			       y == 0 || y == chunkSize - lodIncrement ||
+			       z == 0 || z == chunkSize - lodIncrement;
 		}
 
 		private void CreateCube(Vector3Int cellPosition)
 		{
-			var padding = 1;
 			var cellValues = new float[8];
 			
 			for (var i = 0; i < 8; ++i) {
-				var voxelPosition = cellPosition + new Vector3Int(padding, padding, padding) + TransvoxelTables.RegularCornerOffset[i] * lodIncrement;
+				Vector3Int voxelPosition = cellPosition + TransvoxelTables.RegularCornerOffset[i] * lodIncrement;
 				cellValues[i] = SampleTerrainMap(voxelPosition);
 			}
-			
-			var caseCode = ((cellValues[0] < 0 ? 0x01 : 0)
-			                | (cellValues[1] < 0 ? 0x02 : 0)
-			                | (cellValues[2] < 0 ? 0x04 : 0)
-			                | (cellValues[3] < 0 ? 0x08 : 0)
-			                | (cellValues[4] < 0 ? 0x10 : 0)
-			                | (cellValues[5] < 0 ? 0x20 : 0)
-			                | (cellValues[6] < 0 ? 0x40 : 0)
-			                | (cellValues[7] < 0 ? 0x80 : 0));
 
+			var caseCode = (cellValues[0] > 0 ? 0x01 : 0)
+							| (cellValues[1] > 0 ? 0x02 : 0)
+							| (cellValues[2] > 0 ? 0x04 : 0)
+							| (cellValues[3] > 0 ? 0x08 : 0)
+							| (cellValues[4] > 0 ? 0x10 : 0)
+							| (cellValues[5] > 0 ? 0x20 : 0)
+							| (cellValues[6] > 0 ? 0x40 : 0)
+							| (cellValues[7] > 0 ? 0x80 : 0);
+ 
 			if (caseCode == 0 || caseCode == 255) {
 				return;
 			}
@@ -68,7 +78,7 @@ namespace TerrainBakery.Jobs
 			var indices = cellData.GetIndices();
 			
 			var verts = new Vector3[cellVertCount];
-			for (var i = 0; i < cellVertCount; ++i)
+			for (var i = 0; i < cellVertCount; i++)
 			{
 				var edgeCode = edgeCodes[i];
 
@@ -81,14 +91,14 @@ namespace TerrainBakery.Jobs
 				var t0 = density1 / (density1 - density0);
 				var t1 = 1 - t0;
 				
-				var vertLocalPos0 = cellPosition + TransvoxelTables.RegularCornerOffset[cornerIdx0];
-				var vertLocalPos1 = cellPosition + TransvoxelTables.RegularCornerOffset[cornerIdx1];
+				var vertLocalPos0 = cellPosition + TransvoxelTables.RegularCornerOffset[cornerIdx0] * lodIncrement;
+				var vertLocalPos1 = cellPosition + TransvoxelTables.RegularCornerOffset[cornerIdx1] * lodIncrement;
 
 				Vector3 vert0Copy = vertLocalPos0;
 				Vector3 vert1Copy = vertLocalPos1;
 				
 				var vertex = vert0Copy * t0 + vert1Copy * t1;
-				verts[i] = vertex * lodIncrement;
+				verts[i] = vertex;
 			}
 
 			var cellTriCount = cellData.GetTriangleCount();

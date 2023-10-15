@@ -69,9 +69,9 @@ namespace TerrainBakery.Jobs
 				var zPos = chunkPosition.z + z;
 
 				var noiseValue = FastNoiseLite.GetNoise(
-					xPos * 1.5f,
-					zPos * 1.5f,
-					yPos * 1.5f,
+					xPos,
+					zPos,
+					yPos,
 					seed,
 					octaves,
 					weightedStrength,
@@ -87,9 +87,9 @@ namespace TerrainBakery.Jobs
 				var t = 1f - Mathf.Exp(-0.3f * (distance - (planetSize)));
 
 				var caveNoiseValue = FastNoiseLite.GetNoise(
-					xPos * 1.5f,
-					zPos * 1.5f,
-					yPos * 1.5f,
+					xPos,
+					zPos,
+					yPos,
 					seed,
 					octavesCaves,
 					weightedStrengthCaves,
@@ -97,7 +97,7 @@ namespace TerrainBakery.Jobs
 					gainCaves);
 				
 				var value = Mathf.Lerp(caveNoiseValue > 0.4f ? caveNoiseValue : noiseValue, 1f, t);
-				terrainMap[index + chunkSize * (y + chunkSize * z)] = value;
+				terrainMap[index + chunkSize * (y + chunkSize * z)] = noiseValue;
 			}
 		}
 	}
