@@ -10,16 +10,38 @@ public class Generator : MonoBehaviour
     [SerializeField] private GameObject test;
     [SerializeField] private Material Material;
 
+    private Transform parent;
+
     // Start is called before the first frame update
     void Start()
     {
-        CreateChunk(new Vector3(0,0,0), 1);
-        CreateChunk(new Vector3(-30,0,0), 0);
+        parent = new GameObject("Chunks").transform;
+        
+        for (int x = -120; x < 120; x+=32)
+        // for (int y = -120; y < 120; y+=30)
+        for (int z = -120; z < 120; z+=32)
+        {
+            var lod = 0;
+            var distance = Vector3.Distance(new Vector3(x,0,z), new Vector3(120, 0, 0));
+            if (distance > 130)
+            {
+                lod = 1;
+            }
+            if (distance > 200)
+            {
+                lod = 2;
+            }
+            if (distance > 300)
+            {
+                lod = 3;
+            }
+            CreateChunk(new Vector3(x,0,z), lod);
+        }
     }
 
     private void CreateChunk(Vector3 chunkPosition, int lod)
     {
-        var chunkSize = 32;
+        var chunkSize = 33;
         var chunkSizeDoubled = chunkSize * 2;
         var terrainMapSize = chunkSizeDoubled * chunkSizeDoubled * chunkSize;
 
@@ -28,7 +50,7 @@ public class Generator : MonoBehaviour
         {
             chunkSize = chunkSize,
             chunkPosition = chunkPosition,
-            planetSize = 30,
+            planetSize = 100,
             octaves = 1,
             weightedStrength = 1,
             lacunarity = 0.2f,
@@ -41,7 +63,7 @@ public class Generator : MonoBehaviour
             terrainMap = new NativeArray<float>(terrainMapSize, Allocator.TempJob),
             seed = 1
         };
-        terrainMapJob.Schedule(chunkSize, 244).Complete();
+        terrainMapJob.Schedule(chunkSize, 320).Complete();
 
         var meshDataJob = new TransvoxelMeshDataJob
         {
@@ -93,8 +115,9 @@ public class Generator : MonoBehaviour
         meshFilterMesh.RecalculateNormals();
         meshDataSet.Mesh = meshFilterMesh;
 
-        var gameobject = new GameObject(0 == 1 ? "LOD: 0" : "LOD: 3");
+        var gameobject = new GameObject($"LOD: {lod}");
         gameobject.transform.position = chunkPosition;
+        gameobject.transform.parent = parent;
         var meshFilter = gameobject.AddComponent<MeshFilter>();
         meshFilter.mesh = meshFilterMesh;
         var meshRenderer = gameobject.AddComponent<MeshRenderer>();
@@ -159,7 +182,7 @@ public class Generator : MonoBehaviour
         meshFilterMesh.RecalculateNormals();
         meshDataSet.Mesh = meshFilterMesh;
         
-        var gameobject = new GameObject("LOD: " + lod);
+        var gameobject = new GameObject($"LOD: {lod} Seam");
         gameobject.transform.position = chunkPosition;
         var meshFilter = gameobject.AddComponent<MeshFilter>();
         meshFilter.mesh = meshFilterMesh;

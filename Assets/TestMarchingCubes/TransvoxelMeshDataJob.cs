@@ -24,23 +24,20 @@ namespace TerrainBakery.Jobs
 			lodIncrement = TransvoxelTables.lodTable[lod];
 			
 			// Loop through each "cube" in our terrain.
-			for (var x = 0; x < chunkSize - 2; x += lodIncrement)
-			for (var y = 0; y < chunkSize - 2; y += lodIncrement)
-			for (var z = 0; z < chunkSize - 2; z += lodIncrement)
+			for (var x = 0; x < chunkSize - 1; x += lodIncrement)
+			for (var y = 0; y < chunkSize - 1; y += lodIncrement)
+			for (var z = 0; z < chunkSize - 1; z += lodIncrement)
 			{
-				if (lodIncrement != 1 && IsEdgeCube(x, y, z))
-				{
-					continue;
-				}
+				if (lod != 0 && IsEdgeCube(x, y, z)) continue;
 				CreateCube(new Vector3Int(x, y, z));
 			}
 		}
 		
 		private bool IsEdgeCube(int x, int y, int z)
 		{
-			return x == 0 || x == chunkSize - lodIncrement ||
-			       y == 0 || y == chunkSize - lodIncrement ||
-			       z == 0 || z == chunkSize - lodIncrement;
+			return x == 0 || x == chunkSize - lodIncrement - 1 ||
+			       y == 0 || y == chunkSize - lodIncrement - 1 ||
+			       z == 0 || z == chunkSize - lodIncrement - 1;
 		}
 
 		private void CreateCube(Vector3Int cellPosition)
@@ -48,7 +45,7 @@ namespace TerrainBakery.Jobs
 			var cellValues = new float[8];
 			
 			for (var i = 0; i < 8; ++i) {
-				Vector3Int voxelPosition = cellPosition + TransvoxelTables.RegularCornerOffset[i] * lodIncrement;
+				var voxelPosition = cellPosition + TransvoxelTables.RegularCornerOffset[i] * lodIncrement;
 				cellValues[i] = SampleTerrainMap(voxelPosition);
 			}
 

@@ -60,8 +60,8 @@ namespace TerrainBakery.Jobs
 		{
 			// The data points for terrain are stored at the corners of our "cubes", so the terrainMap needs to be 1 larger
 			// than the width/height of our mesh.
-			for (var z = 0; z < chunkSize; z++)
 			for (var y = 0; y < chunkSize; y++)
+			for (var z = 0; z < chunkSize; z++)
 			{
 				// Get a terrain height using regular old Perlin noise.
 				var xPos = chunkPosition.x + index;
@@ -70,8 +70,8 @@ namespace TerrainBakery.Jobs
 
 				var noiseValue = FastNoiseLite.GetNoise(
 					xPos,
-					zPos,
 					yPos,
+					zPos,
 					seed,
 					octaves,
 					weightedStrength,
@@ -88,8 +88,8 @@ namespace TerrainBakery.Jobs
 
 				var caveNoiseValue = FastNoiseLite.GetNoise(
 					xPos,
-					zPos,
 					yPos,
+					zPos,
 					seed,
 					octavesCaves,
 					weightedStrengthCaves,
@@ -97,7 +97,7 @@ namespace TerrainBakery.Jobs
 					gainCaves);
 				
 				var value = Mathf.Lerp(caveNoiseValue > 0.4f ? caveNoiseValue : noiseValue, 1f, t);
-				terrainMap[index + chunkSize * (y + chunkSize * z)] = noiseValue;
+				terrainMap[index + chunkSize * (y + chunkSize * z)] = value;
 			}
 		}
 	}

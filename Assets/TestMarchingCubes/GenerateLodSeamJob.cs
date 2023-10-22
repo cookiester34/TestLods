@@ -28,8 +28,8 @@ namespace TestMarchingCubes
 			lodIncrement = TransvoxelTables.lodTable[lod];
 			
 			// Loop through each "cube" in our terrain.
-			for (var x = 0; x < chunkSize - 2; x += lodIncrement)
-			for (var y = 0; y < chunkSize - 2; y += lodIncrement)
+			for (var x = 0; x < chunkSize - 1; x += lodIncrement)
+			for (var y = 0; y < chunkSize - 1; y += lodIncrement)
 			{
 				if (IsEdgeCube(x, y, 0))
 				{
@@ -40,54 +40,29 @@ namespace TestMarchingCubes
 		
 		private bool IsEdgeCube(int x, int y, int z)
 		{
-			return x == 0 || x == chunkSize - lodIncrement ||
-			       y == 0 || y == chunkSize - lodIncrement ||
-			       z == 0 || z == chunkSize - lodIncrement;
+			return x == 0 || x == chunkSize - lodIncrement - 1 ||
+			       y == 0 || y == chunkSize - lodIncrement - 1 ||
+			       z == 0 || z == chunkSize - lodIncrement - 1;
 		}
 
 		private void CreateCube(Vector3Int cellPosition)
 		{
-			var trCellValues = new float[13];
+			var trCellValues = new float[9];
+			for (int i = 0; i < 9; i++)
+			{
+				var voxelPosition = cellPosition + TransvoxelTables.TransitionCornerOffset[i] * lodIncrement;
+				trCellValues[i] = SampleTerrainMap(voxelPosition);
+			}
 			
-			Vector3Int position0 = cellPosition + TransvoxelTables.TransitionCornerOffset[0] * lodIncrement;
-			Vector3Int position2 = cellPosition + TransvoxelTables.TransitionCornerOffset[2] * lodIncrement;
-			Vector3Int position6 = cellPosition + TransvoxelTables.TransitionCornerOffset[6] * lodIncrement;
-			Vector3Int position8 = cellPosition + TransvoxelTables.TransitionCornerOffset[8] * lodIncrement;
-			Vector3Int position9 = cellPosition + TransvoxelTables.TransitionCornerOffset[9] * lodIncrement;
-			Vector3Int positionA = cellPosition + TransvoxelTables.TransitionCornerOffset[10] * lodIncrement;
-			Vector3Int positionB = cellPosition + TransvoxelTables.TransitionCornerOffset[11] * lodIncrement;
-			Vector3Int positionC = cellPosition + TransvoxelTables.TransitionCornerOffset[12] * lodIncrement;
-			
-			Vector3Int position1 = cellPosition + TransvoxelTables.TransitionCornerOffset[1] * lodIncrement;
-			Vector3Int position3 = cellPosition + TransvoxelTables.TransitionCornerOffset[3] * lodIncrement;
-			Vector3Int position4 = cellPosition + TransvoxelTables.TransitionCornerOffset[4] * lodIncrement;
-			Vector3Int position5 = cellPosition + TransvoxelTables.TransitionCornerOffset[5] * lodIncrement;
-			Vector3Int position7 = cellPosition + TransvoxelTables.TransitionCornerOffset[7] * lodIncrement;
-			
-			trCellValues[0] = SampleTerrainMap(position0);
-			trCellValues[2] = SampleTerrainMap(position2);
-			trCellValues[6] = SampleTerrainMap(position6);
-			trCellValues[8] = SampleTerrainMap(position8);
-			trCellValues[9] = SampleTerrainMap(position9);
-			trCellValues[10] = SampleTerrainMap(positionA);
-			trCellValues[11] = SampleTerrainMap(positionB);
-			trCellValues[12] = SampleTerrainMap(positionC);
-			
-			trCellValues[1] = SampleTerrainMap(position1);
-			trCellValues[3] = SampleTerrainMap(position3);
-			trCellValues[4] = SampleTerrainMap(position4);
-			trCellValues[5] = SampleTerrainMap(position5);
-			trCellValues[7] = SampleTerrainMap(position7);
-			
-			int caseCode = (trCellValues[0] < 0 ? 1 : 0)
-			               | (trCellValues[1] < 0 ? 2 : 0)
-			               | (trCellValues[2] < 0 ? 4 : 0)
-			               | (trCellValues[5] < 0 ? 8 : 0)
-			               | (trCellValues[8] < 0 ? 16 : 0)
-			               | (trCellValues[7] < 0 ? 32 : 0)
-			               | (trCellValues[6] < 0 ? 64 : 0)
-			               | (trCellValues[3] < 0 ? 128 : 0)
-			               | (trCellValues[4] < 0 ? 256 : 0);
+			int caseCode = ((trCellValues[0] < 0 ? 1 : 0)
+			                | (trCellValues[1] < 0 ? 2 : 0)
+			                | (trCellValues[2] < 0 ? 4 : 0)
+			                | (trCellValues[5] < 0 ? 8 : 0)
+			                | (trCellValues[8] < 0 ? 16 : 0)
+			                | (trCellValues[7] < 0 ? 32 : 0)
+			                | (trCellValues[6] < 0 ? 64 : 0)
+			                | (trCellValues[3] < 0 ? 128 : 0)
+			                | (trCellValues[4] < 0 ? 256 : 0));
 			
 			if (caseCode == 0 || caseCode == 511) {
 				return;
@@ -100,8 +75,8 @@ namespace TestMarchingCubes
 		{
 			return FastNoiseLite.GetNoise(
 				position.x,
-				position.z,
 				position.y,
+				position.z,
 				seed,
 				octaves,
 				weightedStrength,
